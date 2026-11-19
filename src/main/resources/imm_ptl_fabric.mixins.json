@@ -1,5 +1,5 @@
 {
-  "required": true,
+  "required": false,
   "package": "qouteall.imm_ptl.core.platform_specific.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [

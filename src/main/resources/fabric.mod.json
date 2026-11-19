@@ -19,6 +19,9 @@
   "icon": "assets/immersive_portals/icon.png",
   "environment": "*",
   "entrypoints": {
+    "preLaunch": [
+      "qouteall.imm_ptl.core.DebugMixinAuditPreLaunch"
+    ],
     "main": [
       "qouteall.imm_ptl.peripheral.platform_specific.PeripheralModEntry",
       "qouteall.imm_ptl.core.platform_specific.IPModEntry",

@@ -1,5 +1,5 @@
 {
-  "required": true,
+  "required": false,
   "package": "qouteall.imm_ptl.peripheral.mixin",
   "compatibilityLevel": "JAVA_25",
   "plugin": "qouteall.imm_ptl.peripheral.IPPeripheralMixinPlugin",

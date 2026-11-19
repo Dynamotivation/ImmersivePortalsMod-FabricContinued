@@ -638,7 +638,7 @@ public class Helper {
     public static Vec3 getVec3d(CompoundTag compoundTag, String name) {
         return new Vec3(
             compoundTag.getDoubleOr(name + "X", 0.0),
-            compoundTag.getDouble(name + "Y"),
+            compoundTag.getDoubleOr(name + "Y", 0.0),
             compoundTag.getDouble(name + "Z")
         );
     }
@@ -662,7 +662,7 @@ public class Helper {
     public static BlockPos getVec3i(CompoundTag compoundTag, String name) {
         return new BlockPos(
             compoundTag.getIntOr(name + "X", 0),
-            compoundTag.getInt(name + "Y"),
+            compoundTag.getIntOr(name + "Y", 0),
             compoundTag.getInt(name + "Z")
         );
     }
@@ -681,7 +681,7 @@ public class Helper {
         if (compoundTag.contains(name + "X")) {
             return new DQuaternion(
                 compoundTag.getDoubleOr(name + "X", 0.0),
-                compoundTag.getDouble(name + "Y"),
+                compoundTag.getDoubleOr(name + "Y", 0.0),
                 compoundTag.getDouble(name + "Z"),
                 compoundTag.getDouble(name + "W")
             );

@@ -1694,8 +1694,8 @@ public class Mesh2D {
     }
     
     public static @Nullable Mesh2D fromTag(CompoundTag tag) {
-        ListTag pointCoords = tag.getList("pointCoords", Tag.TAG_DOUBLE);
-        ListTag triangles = tag.getList("triangles", Tag.TAG_INT);
+        ListTag pointCoords = tag.getListOrEmpty("pointCoords");
+        ListTag triangles = tag.getListOrEmpty("triangles");
         
         if (pointCoords.isEmpty() || pointCoords.size() % 2 != 0) {
             return null;
@@ -1716,7 +1716,7 @@ public class Mesh2D {
             
             mesh.addTriangle(
                 pointCoords.getDoubleOr(p0Index * 2, 0.0),
-                pointCoords.getDouble(p0Index * 2 + 1),
+                pointCoords.getDoubleOr(p0Index * 2 + 1, 0.0),
                 pointCoords.getDouble(p1Index * 2),
                 pointCoords.getDouble(p1Index * 2 + 1),
                 pointCoords.getDouble(p2Index * 2),

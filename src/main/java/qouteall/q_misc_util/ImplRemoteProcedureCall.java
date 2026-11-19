@@ -106,13 +106,13 @@ public class ImplRemoteProcedureCall {
             .put(
                 new TypeToken<ResourceKey<Level>>() {}.getType(),
                 buf -> ResourceKey.create(
-                    Registries.DIMENSION, buf.readResourceLocation()
+                    Registries.DIMENSION, buf.readIdentifier()
                 )
             )
             .put(
                 new TypeToken<ResourceKey<Biome>>() {}.getType(),
                 buf -> ResourceKey.create(
-                    Registries.BIOME, buf.readResourceLocation()
+                    Registries.BIOME, buf.readIdentifier()
                 )
             )
             .put(BlockPos.class, buf -> buf.readBlockPos())

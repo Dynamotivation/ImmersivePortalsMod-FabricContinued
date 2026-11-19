@@ -30,7 +30,7 @@ import org.apache.logging.log4j.Logger;
 import qouteall.imm_ptl.core.IPGlobal;
 import qouteall.imm_ptl.core.McHelper;
 import qouteall.imm_ptl.core.ducks.IEEntity;
-import qouteall.imm_ptl.core.mixin.common.miscellaneous.IEEndDragonFight;
+import qouteall.imm_ptl.core.mixin.common.miscellaneous.IEEnderDragonFight;
 import qouteall.imm_ptl.core.portal.animation.NormalAnimation;
 import qouteall.imm_ptl.core.portal.animation.RotationAnimation;
 import qouteall.imm_ptl.core.portal.shape.BoxPortalShape;
@@ -93,8 +93,8 @@ public class EndPortalEntity extends Portal {
         if (dragonFight == null) {
             return;
         }
-        if (((IEEndDragonFight) dragonFight).ip_getNeedsStateScanning()) {
-            ((IEEndDragonFight) dragonFight).ip_scanState();
+        if (((IEEnderDragonFight) dragonFight).ip_getNeedsStateScanning()) {
+            ((IEEnderDragonFight) dragonFight).ip_scanState();
         }
     }
     

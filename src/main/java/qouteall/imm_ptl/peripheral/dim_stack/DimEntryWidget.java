@@ -2,7 +2,6 @@ package qouteall.imm_ptl.peripheral.dim_stack;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
@@ -79,92 +78,6 @@ public class DimEntryWidget extends ContainerObjectSelectionList.Entry<DimEntryW
         return children;
     }
     
-    @Override
-    public void render(
-        @NotNull GuiGraphics guiGraphics,
-        int index,
-        int y,
-        int x,
-        int rowWidth,
-        int itemHeight,
-        int mouseX,
-        int mouseY,
-        boolean bl,
-        float delta
-    ) {
-        Minecraft client = Minecraft.getInstance();
-        
-        guiGraphics.drawString(
-            client.font, dimensionName.getString(),
-            x + widgetHeight + 3, (int) (y),
-            0xFFFFFFFF
-        );
-        
-        guiGraphics.drawString(
-            client.font, dimension.identifier().toString(),
-            x + widgetHeight + 3, (int) (y + 10),
-            0xFF999999
-        );
-        
-        if (dimIconPath != null) {
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(x, y, 0);
-            
-            int iconLen = widgetHeight - 4;
-            
-            if (entry != null && entry.flipped) {
-                guiGraphics.pose().rotateAround(
-                    DQuaternion.rotationByDegrees(new Vec3(0, 0, 1), 180).toMcQuaternion(),
-                    iconLen / 2.0f, iconLen / 2.0f, 0
-                );
-            }
-            
-            guiGraphics.blit(
-                dimIconPath, 0, 0, 0.0F, 0.0F,
-                iconLen, iconLen,
-                iconLen, iconLen
-            );
-            
-            guiGraphics.pose().popPose();
-        }
-        
-        if (entry != null) {
-            guiGraphics.drawString(
-                client.font, getText1(),
-                x + widgetHeight + 3, (int) (y + 20),
-                0xFF999999
-            );
-            guiGraphics.drawString(
-                client.font, getText2(),
-                x + widgetHeight + 3, (int) (y + 30),
-                0xFF999999
-            );
-            
-            if (arrowToPrevious != ArrowType.none) {
-                guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(x + rowWidth - 13, y, 0);
-                guiGraphics.pose().scale(1.5f, 1.5f, 1.5f);
-                guiGraphics.drawString(
-                    client.font, Component.literal("↑"),
-                    0, 0,
-                    arrowToPrevious == ArrowType.enabled ? 0xFF999999 : 0xFFFF0000
-                );
-                guiGraphics.pose().popPose();
-            }
-            
-            if (arrowToNext != ArrowType.none) {
-                guiGraphics.pose().pushPose();
-                guiGraphics.pose().translate(x + rowWidth - 13, y + widgetHeight - 14.5f, 0);
-                guiGraphics.pose().scale(1.5f, 1.5f, 1.5f);
-                guiGraphics.drawString(
-                    client.font, Component.literal("↓"),
-                    0, 0,
-                    arrowToNext == ArrowType.enabled ? 0xFF999999 : 0xFFFF0000
-                );
-                guiGraphics.pose().popPose();
-            }
-        }
-    }
     
     private Component getText1() {
         MutableComponent scaleText = entry.scale != 1.0 ?
@@ -185,11 +98,5 @@ public class DimEntryWidget extends ContainerObjectSelectionList.Entry<DimEntryW
         return horizontalRotationText;
     }
     
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        selectCallback.accept(this);
-        super.mouseClicked(mouseX, mouseY, button);
-        return true;//allow outer dragging
-    }
     
 }

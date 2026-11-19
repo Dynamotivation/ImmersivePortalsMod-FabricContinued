@@ -1,7 +1,6 @@
 package qouteall.imm_ptl.peripheral.dim_stack;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
@@ -41,30 +40,6 @@ public class DimListWidget extends AbstractSelectionList<DimEntryWidget> {
         this.draggingCallback = draggingCallback;
     }
     
-    @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (type == Type.mainDimensionList && draggingCallback != null) {
-            DimEntryWidget selected = getSelected();
-        
-            if (selected != null) {
-                DimEntryWidget mouseOn = getEntryAtPosition(mouseX, mouseY);
-                if (mouseOn != null) {
-                    if (mouseOn != selected) {
-                        int selectedIndex = children().indexOf(selected);
-                        int mouseOnIndex = children().indexOf(mouseOn);
-                        if (selectedIndex != -1 && mouseOnIndex != -1) {
-                            draggingCallback.run(selectedIndex, mouseOnIndex);
-                        }
-                        else {
-                            Helper.err("Invalid dragging");
-                        }
-                    }
-                }
-            }
-        }
-        
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
-    }
     
     @Override
     protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
@@ -77,13 +52,5 @@ public class DimListWidget extends AbstractSelectionList<DimEntryWidget> {
         return ROW_WIDTH;
     }
     
-    @Override
-    protected int getScrollbarPosition() {
-        return (width - ROW_WIDTH) / 2 + ROW_WIDTH;
-    }
     
-    @Override
-    protected void renderListBackground(GuiGraphics guiGraphics) {
-        // don't render background
-    }
 }

@@ -1,7 +1,6 @@
 package qouteall.imm_ptl.peripheral.dim_stack;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -71,14 +70,4 @@ public class SelectDimensionScreen extends Screen {
         this.minecraft.gui.setScreen(this.parent);
     }
     
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-        super.render(guiGraphics, mouseX, mouseY, delta);
-        
-        dimListWidget.render(guiGraphics, mouseX, mouseY, delta);
-        
-        guiGraphics.drawCenteredString(
-            this.font, this.title.getString(), this.width / 2, 10, -1
-        );
-    }
 }

@@ -1,5 +1,6 @@
 package qouteall.imm_ptl.peripheral.dim_stack;
 
+import net.minecraft.server.permissions.Permissions;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
@@ -119,7 +120,7 @@ public class DimStackManagement {
             newMap.put(world.dimension(), replacement);
             LOGGER.info(
                 "Bedrock Replacement {} {}",
-                world.dimension().location(),
+                world.dimension().identifier(),
                 replacement != null ?
                     BuiltInRegistries.BLOCK.getKey(replacement.getBlock()) : "null"
             );
@@ -143,7 +144,7 @@ public class DimStackManagement {
             BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
             for (int x = 0; x < 16; x++) {
                 for (int z = 0; z < 16; z++) {
-                    for (int y = chunk.getMinBuildHeight(); y < chunk.getMaxBuildHeight(); y++) {
+                    for (int y = chunk.getMinY(); y < chunk.getMaxY(); y++) {
                         mutable.set(x, y, z);
                         BlockState blockState = chunk.getBlockState(mutable);
                         if (blockState.getBlock() == Blocks.BEDROCK) {
@@ -178,8 +179,8 @@ public class DimStackManagement {
     public static void onDimensionStackCommandExecute(
         ServerPlayer player
     ) {
-        List<String> dimIdList = collectDimStackCandidateWhenServerRunning(player.server)
-            .stream().map(k -> k.location().toString()).toList();
+        List<String> dimIdList = collectDimStackCandidateWhenServerRunning(player.level().getServer())
+            .stream().map(k -> k.identifier().toString()).toList();
         
         McRemoteProcedureCall.tellClientToInvoke(
             player,
@@ -209,17 +210,17 @@ public class DimStackManagement {
                             "qouteall.imm_ptl.peripheral.dim_stack.DimStackManagement.RemoteCallables.serverRemoveDimStack"
                         );
                     }
-                    Minecraft.getInstance().setScreen(null);
+                    Minecraft.getInstance().gui.setScreen(null);
                 }
             );
             controller.initializeAsDefault();
-            Minecraft.getInstance().setScreen(controller.view);
+            Minecraft.getInstance().gui.setScreen(controller.view);
         }
         
         public static void serverSetupDimStack(
             ServerPlayer player, DimStackInfo dimStackInfo
         ) {
-            if (!player.hasPermissions(2)) {
+            if (!player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
                 player.sendSystemMessage(Component.literal(
                     "You don't have permission to change dimension stack"
                 ));
@@ -233,7 +234,7 @@ public class DimStackManagement {
                 return;
             }
             
-            MinecraftServer server = player.getServer();
+            MinecraftServer server = player.level().getServer();
             
             updateDimStack(server, dimStackInfo);
             
@@ -246,12 +247,12 @@ public class DimStackManagement {
         public static void serverRemoveDimStack(
             ServerPlayer player
         ) {
-            if (!player.hasPermissions(2)) {
+            if (!player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
                 Helper.err("one player without permission tries to change dimension stack");
                 return;
             }
             
-            MinecraftServer server = player.getServer();
+            MinecraftServer server = player.level().getServer();
             
             clearDimStackPortals(server);
             

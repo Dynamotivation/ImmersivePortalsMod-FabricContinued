@@ -112,7 +112,7 @@ public class ExampleGuiPortalRendering {
                 frameBuffer = new TextureTarget(2, 2, true, true);
             }
             
-            Minecraft.getInstance().setScreen(new GuiPortalScreen(dimension, position));
+            Minecraft.getInstance().gui.setScreen(new GuiPortalScreen(dimension, position));
         }
         
         public static void serverRemoveChunkLoader(ServerPlayer player) {

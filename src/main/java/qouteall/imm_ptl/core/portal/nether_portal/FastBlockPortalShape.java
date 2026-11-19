@@ -88,7 +88,7 @@ public record FastBlockPortalShape(
     // (this is not needed when Valhalla is released)
     public static long assemble(int a, int b) {
         // this is not chunk pos but the packing is same as chunk pos
-        return ChunkPos.asLong(a, b);
+        return ChunkPos.pack(a, b);
     }
     
     public static int getAFromAssemble(long l) {
@@ -238,7 +238,7 @@ public record FastBlockPortalShape(
     }
     
     public static @Nullable FastBlockPortalShape fromTag(CompoundTag tag) {
-        int axisInt = tag.getInt("axis");
+        int axisInt = tag.getIntOr("axis", 0);
         if (axisInt < 0 || axisInt > 2) {
             LOGGER.error("invalid axis {}", tag);
             return null;
@@ -257,9 +257,9 @@ public record FastBlockPortalShape(
         
         int positionNum = numNum / 3;
         
-        int firstPointX = positions.getInt(0);
-        int firstPointY = positions.getInt(1);
-        int firstPointZ = positions.getInt(2);
+        int firstPointX = positions.getIntOr(0, 0);
+        int firstPointY = positions.getIntOr(1, 0);
+        int firstPointZ = positions.getIntOr(2, 0);
         
         IntArrayList areaBlockCoords = new IntArrayList();
         if (axis != Direction.Axis.X) areaBlockCoords.add(firstPointX);

@@ -301,7 +301,7 @@ public class DimStackScreen extends Screen {
         
         int insertingPosition = position + 1;
         
-        Minecraft.getInstance().setScreen(
+        Minecraft.getInstance().gui.setScreen(
             new SelectDimensionScreen(
                 this,
                 dimensionType -> {
@@ -333,7 +333,7 @@ public class DimStackScreen extends Screen {
             return;
         }
         
-        Minecraft.getInstance().setScreen(new DimStackEntryEditScreen(
+        Minecraft.getInstance().gui.setScreen(new DimStackEntryEditScreen(
             this, selected,
             () -> {
                 int newlyChangingEntryIndex = dimListWidget.children().indexOf(selected);

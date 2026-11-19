@@ -37,7 +37,7 @@ public class BorderBarrierFiller {
         ).findFirst().orElse(null);
         
         if (zone == null) {
-            player.displayClientMessage(Component.translatable("imm_ptl.cannot_find_zone"), false);
+            startFillingBorder(world, borderBox, l -> player.sendSystemMessage(l));
             return;
         }
         
@@ -58,7 +58,7 @@ public class BorderBarrierFiller {
         ).findFirst().orElse(null);
         
         if (zone == null) {
-            player.displayClientMessage(Component.translatable("imm_ptl.cannot_find_zone"), false);
+            startFillingBorder(world, borderBox, l -> player.sendSystemMessage(l));
             return;
         }
         
@@ -99,7 +99,7 @@ public class BorderBarrierFiller {
             );
             
             
-            startFillingBorder(world, borderBox, l -> player.displayClientMessage(l, false));
+            startFillingBorder(world, borderBox, l -> player.sendSystemMessage(l));
         }
     }
     

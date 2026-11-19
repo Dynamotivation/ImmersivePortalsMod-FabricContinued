@@ -7,7 +7,6 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.MultiLineLabel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -64,71 +63,6 @@ public class CustomTextOverlay {
      * {@link Gui#render(GuiGraphics, float)}
      * {@link net.minecraft.client.gui.screens.AlertScreen}
      */
-    public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
-        long currTime = System.nanoTime();
-        
-        boolean removes = ENTRIES.entrySet().removeIf(e -> e.getValue().clearingTime < currTime);
-        if (removes) {
-            multiLineLabelCache = null;
-        }
-        
-        if (ENTRIES.isEmpty()) {
-            return;
-        }
-        
-        if (multiLineLabelCache == null) {
-            // don't make the first component the base component
-            // to avoid style override
-            MutableComponent component = Component.empty();
-            boolean isBeginning = true;
-            for (Entry entry : ENTRIES.values()) {
-                if (isBeginning) {
-                    isBeginning = false;
-                }
-                else {
-                    component.append("\n");
-                }
-                component.append(entry.component());
-            }
-            
-            multiLineLabelCache = MultiLineLabel.create(
-                Minecraft.getInstance().font,
-                component,
-                (Minecraft.getInstance().getWindow().getGuiScaledWidth() - 20)
-            );
-            assert multiLineLabelCache != null;
-        }
-        
-        Minecraft minecraft = Minecraft.getInstance();
-        
-        guiGraphics.pose().pushPose();
-        
-        int guiScaledWidth = minecraft.getWindow().getGuiScaledWidth();
-        int guiScaledHeight = minecraft.getWindow().getGuiScaledHeight();
-        
-        Font font = minecraft.gui.hud.getFont();
-        
-        Profiler.get().push("imm_ptl_custom_overlay");
-        if (renderAtBottomCenter) {
-            // Note: the parchment names are incorrect
-            multiLineLabelCache.renderCentered(
-                guiGraphics,
-                guiScaledWidth / 2, // x
-                (int) (guiScaledHeight * 0.75) // y
-            );
-        }
-        else {
-            multiLineLabelCache.renderLeftAligned(
-                guiGraphics,
-                10, // x
-                10, // y
-                9, // line height
-                0xffffffff // color
-            );
-        }
-        
-        guiGraphics.pose().popPose();
-        
-        Profiler.get().pop();
+    public static void render(net.minecraft.client.gui.GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
     }
 }

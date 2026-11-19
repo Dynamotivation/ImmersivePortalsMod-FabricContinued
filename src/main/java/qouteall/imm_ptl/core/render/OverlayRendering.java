@@ -39,7 +39,7 @@ public class OverlayRendering {
     }
     
     public static BlockState getOverlayBlockState(BreakablePortalEntity portal) {
-        return portal.getActualOverlay();
+        return null;
     }
     
     static int getOverlayLight() {

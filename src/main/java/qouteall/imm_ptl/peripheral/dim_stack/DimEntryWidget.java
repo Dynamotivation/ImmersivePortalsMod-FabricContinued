@@ -24,6 +24,13 @@ import java.util.function.Consumer;
 
 // extending EntryListWidget.Entry is also fine
 public class DimEntryWidget extends ContainerObjectSelectionList.Entry<DimEntryWidget> {
+    // TODO(26.2): dimension entry rendering needs porting to GuiGraphicsExtractor
+    @Override
+    public void extractContent(
+        net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float a
+    ) {
+    }
+    
     private static final Logger LOGGER = LogUtils.getLogger();
     
     public static enum ArrowType {

@@ -1470,7 +1470,7 @@ public class Helper {
     
     public static @Nullable Vec3 vec3FromListTag(Tag tag) {
         if (tag instanceof ListTag listTag) {
-            if (listTag.getElementType() == Tag.TAG_DOUBLE && listTag.size() == 3) {
+            if (listTag.size() == 3 && listTag.stream().allMatch(t -> t instanceof net.minecraft.nbt.DoubleTag)) {
                 return new Vec3(
                     listTag.getDoubleOr(0, 0.0),
                     listTag.getDoubleOr(1, 0.0),

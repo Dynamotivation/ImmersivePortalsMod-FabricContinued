@@ -11,6 +11,7 @@ public class DimensionRenderHelper {
     
     
     public DimensionRenderHelper(Level world) {
+        this.world = world;
     }
     
     public void tick() {

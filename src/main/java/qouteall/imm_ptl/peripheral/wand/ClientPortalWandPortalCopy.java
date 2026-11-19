@@ -7,8 +7,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -284,79 +282,10 @@ public class ClientPortalWandPortalCopy {
     
     public static void render(
         PoseStack matrixStack,
-        MultiBufferSource.BufferSource bufferSource,
+        Object bufferSource,
         double camX, double camY, double camZ
     ) {
-        LocalPlayer player = Minecraft.getInstance().player;
-        
-        if (player == null) {
-            return;
-        }
-        
-        if (PortalRendering.isRendering()) {
-            return;
-        }
-        
-        ResourceKey<Level> currDim = player.level().dimension();
-        Vec3 cameraPos = new Vec3(camX, camY, camZ);
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.lines());
-        
-        Vec3 cursorPos = null;
-        RenderedPoint currentCursor = cursor.getCurrent();
-        if (currentCursor != null) {
-            WithDim<Vec3> posWithDim = currentCursor.pos();
-            if (posWithDim != null) {
-                if (posWithDim.dimension() == currDim) {
-                    cursorPos = posWithDim.value();
-                }
-            }
-        }
-        
-        if (cursorPos != null) {
-            WireRenderingHelper.renderSmallCubeFrame(
-                vertexConsumer, cameraPos, cursorPos,
-                colorOfCursor, cursor.getCurrent().scale(), matrixStack
-            );
-        }
-        
-        UnilateralPortalState rect = selection.getCurrent();
-        
-        if (rect != null) {
-            if (rect.dimension() == currDim) {
-                WireRenderingHelper.renderRectFrameFlow(
-                    matrixStack, cameraPos,
-                    vertexConsumer, rect,
-                    colorOfSelection1,
-                    colorOfSelection2
-                );
-            }
-        }
-        
-        if (status instanceof Status_PlacingPortal statusPlacingPortal) {
-            DQuaternion orientation = placementOrientation.getCurrent();
-            Double offsetLen = placementOffsetLen.getCurrent();
-            Validate.isTrue(orientation != null);
-            Validate.isTrue(offsetLen != null);
-            
-            Vec3 offset = orientation.rotate(new Vec3(0, offsetLen, 0));
-            
-            if (cursorPos != null) {
-                PlacementRequirement req = statusPlacingPortal.placementRequirement;
-                UnilateralPortalState placement = new UnilateralPortalState(
-                    currDim,
-                    cursorPos.add(offset),
-                    orientation,
-                    req.width(), req.height()
-                );
-                
-                WireRenderingHelper.renderRectFrameFlow(
-                    matrixStack, cameraPos,
-                    vertexConsumer, placement,
-                    colorOfPendingPlacement1,
-                    colorOfPendingPlacement2
-                );
-            }
-        }
-        
+        // TODO(port): the portal wand debug wireframe rendering
+        //  is deferred with the rest of the 26.x renderer redesign.
     }
 }

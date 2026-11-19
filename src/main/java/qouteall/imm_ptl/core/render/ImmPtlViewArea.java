@@ -1,10 +1,8 @@
 package qouteall.imm_ptl.core.render;
 
-import net.minecraft.util.profiling.Profiler;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -13,27 +11,24 @@ import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher.RenderSection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import org.apache.commons.lang3.Validate;
 import org.jetbrains.annotations.Nullable;
 import qouteall.imm_ptl.core.ClientWorldLoader;
 import qouteall.imm_ptl.core.IPGlobal;
-import qouteall.imm_ptl.core.McHelper;
 import qouteall.imm_ptl.core.chunk_loading.ImmPtlClientChunkMap;
 import qouteall.imm_ptl.core.ducks.IERenderSection;
 import qouteall.imm_ptl.core.ducks.IEWorldRenderer;
 import qouteall.imm_ptl.core.miscellaneous.GcMonitor;
-import qouteall.q_misc_util.Helper;
 
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Queue;
-import java.util.Set;
-import java.util.function.LongConsumer;
-
+/**
+ * A portal-aware view area.
+ *
+ * TODO(port): 26.x rebuilt {@link ViewArea} around {@code RotatingSectionStorage} plus a
+ * {@code SectionOcclusionGraph}, and moved section discovery into the extract phase.
+ * The portal-specific section storage is kept as a shell until the renderer redesign;
+ * everything here is currently inert.
+ */
 @Environment(EnvType.CLIENT)
 public class ImmPtlViewArea extends ViewArea {
     
@@ -101,52 +96,22 @@ public class ImmPtlViewArea extends ViewArea {
         int r,
         LevelRenderer worldRenderer
     ) {
-    }
-    
-    @Override
-    protected void createSections(SectionRenderDispatcher sectionBuilder_1) {
-    }
-    
-    @Override
-    public void releaseAllBuffers() {
-    }
-    
-    /**
-     * It will only be called during vanilla outer world rendering
-     * Won't be called in portal rendering
-     * In {@link net.minecraft.client.renderer.SectionOcclusionGraph#initializeQueueForFullUpdate(Camera, Queue)} it reads the RenderChunks in another thread.
-     */
-    @Override
-    public void repositionCamera(double playerX, double playerZ) {
-    }
-    
-    @Override
-    public void setDirty(int cx, int cy, int cz, boolean isImportant) {
+        super(
+            sectionBuilder,
+            world.getMinY(),
+            world.getMaxY(),
+            world.getMinSectionY(),
+            world.getMaxSectionY(),
+            r,
+            worldRenderer.sectionOcclusionGraph()
+        );
+        this.factory = sectionBuilder;
+        this.minSectionY = world.getMinSectionY();
+        this.endSectionY = world.getMaxSectionY() + 1;
     }
     
     public RenderSection provideBuiltChunkByChunkPos(int cx, int cy, int cz) {
         return null;
-    }
-    
-    /**
-     * {@link ViewArea#repositionCamera(double, double)}
-     */
-    private Preset createPresetByChunkPos(int sectionX, int sectionZ) {
-        return null;
-    }
-    
-    /**
-     * {@link ViewArea#repositionCamera(double, double)}
-     */
-    private void foreachPresetCoveredChunkPoses(
-        int centerChunkX, int centerChunkZ,
-        LongConsumer func
-    ) {
-    }
-    
-    //copy because private
-    private int getChunkIndex(int x, int y, int z) {
-        return 0;
     }
     
     public Column provideColumn(long sectionPos) {
@@ -178,14 +143,6 @@ public class ImmPtlViewArea extends ViewArea {
     }
     
     private void purge() {
-    }
-    
-    private boolean shouldDropPreset(long dropTime, long currentTime, Preset preset) {
-        return false;
-    }
-    
-    private Set<RenderSection> getAllActiveBuiltChunks() {
-        return null;
     }
     
     public int getManagedSectionNum() {
@@ -231,13 +188,6 @@ public class ImmPtlViewArea extends ViewArea {
         return null;
     }
     
-    // NOTE it may be accessed from another thread
-    @Nullable
-    @Override
-    protected RenderSection getRenderSectionAt(BlockPos pos) {
-        return null;
-    }
-    
     @Nullable
     public RenderSection rawFetch(int cx, int cy, int cz, long timeMark) {
         if (cy < minSectionY || cy >= endSectionY) {
@@ -246,6 +196,10 @@ public class ImmPtlViewArea extends ViewArea {
         
         long l = ChunkPos.pack(cx, cz);
         Column column = provideColumn(l);
+        
+        if (column == null) {
+            return null;
+        }
         
         column.mark = timeMark;
         

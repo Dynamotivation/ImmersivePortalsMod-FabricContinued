@@ -18,7 +18,7 @@ public class ShaderCodeTransformation {
         vs, fs
     }
     
-    private static boolean matches(ShaderType me, Program.Type type) {
+    private static boolean matches(ShaderType me, ShaderType type) {
         return false;
     }
     
@@ -62,12 +62,12 @@ public class ShaderCodeTransformation {
         }
     }
     
-    public static String transform(Program.Type type, String shaderId, String inputCode) {
+    public static String transform(ShaderType type, String shaderId, String inputCode) {
         return null;
     }
     
     @Nullable
-    private static Config getConfig(Program.Type type, String shaderId) {
+    private static Config getConfig(ShaderType type, String shaderId) {
         return null;
     }
     

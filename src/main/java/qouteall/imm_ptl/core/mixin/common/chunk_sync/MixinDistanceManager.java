@@ -8,8 +8,6 @@ import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.DistanceManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.level.Ticket;
-import net.minecraft.util.SortedArraySet;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -29,11 +27,8 @@ public abstract class MixinDistanceManager implements IEDistanceManager {
     @Final
     private Long2ObjectMap<ObjectSet<ServerPlayer>> playersPerChunk;
     
-    @Shadow
-    protected abstract SortedArraySet<Ticket<?>> getTickets(long position);
-    
     // avoid NPE
-    @Inject(method = "Lnet/minecraft/server/level/DistanceManager;removePlayer(Lnet/minecraft/core/SectionPos;Lnet/minecraft/server/level/ServerPlayer;)V", at = @At("HEAD"))
+    @Inject(method = "removePlayer", at = @At("HEAD"))
     private void onHandleChunkLeave(
         SectionPos sectionPos,
         ServerPlayer serverPlayer,
@@ -52,10 +47,5 @@ public abstract class MixinDistanceManager implements IEDistanceManager {
             ServerLevel world = ((IEChunkMap) chunkManager).ip_getWorld();
             ImmPtlChunkTickets.get(world).flushThrottling(world);
         }
-    }
-    
-    @Override
-    public SortedArraySet<Ticket<?>> portal_getTicketSet(long chunkPos) {
-        return getTickets(chunkPos);
     }
 }

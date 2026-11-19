@@ -483,9 +483,8 @@ public class ClientTeleportationManager {
         toWorld.addEntity(player);
         ((IEAbstractClientPlayer) player).ip_setClientLevel(toWorld);
         
-        IEGameRenderer gameRenderer = (IEGameRenderer) Minecraft.getInstance().gameRenderer;
-        gameRenderer.ip_setLightmapTextureManager(ClientWorldLoader
-            .getDimensionRenderHelper(toDimension).lightmapTexture);
+        // TODO(port): 26.x replaced the lightmap texture with a lightmap render state,
+        //  so the per-dimension lightmap swap is deferred with the renderer redesign.
         
         client.level = toWorld;
         ((IEMinecraftClient) client).ip_setWorldRenderer(
@@ -497,8 +496,7 @@ public class ClientTeleportationManager {
             ((IEParticleManager) client.particleEngine).ip_setWorld(toWorld);
         }
         
-        client.getBlockEntityRenderDispatcher().setLevel(toWorld);
-        
+                
         if (vehicle != null) {
             Vec3 offset = McHelper.getVehicleOffsetFromPassenger(vehicle, player);
             Vec3 vehiclePos = player.position().add(offset);
@@ -511,7 +509,7 @@ public class ClientTeleportationManager {
                 player.position().add(offset),
                 McHelper.lastTickPosOf(player).add(offset)
             );
-            player.startRiding(vehicle, true);
+            player.startRiding(vehicle, true, false);
         }
         
         Helper.log(String.format(
@@ -710,13 +708,10 @@ public class ClientTeleportationManager {
             }
             
             // both of them are important for Minecart
-            entity.setPos(pos);
-            entity.lerpTo(
+            entity.snapTo(
                 pos.x, pos.y, pos.z,
-                entity.getYRot(), entity.getXRot(),
-                0
+                entity.getYRot(), entity.getXRot()
             );
-            entity.setPos(pos);
         }
     }
 }

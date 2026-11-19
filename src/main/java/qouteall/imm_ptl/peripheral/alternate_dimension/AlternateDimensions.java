@@ -72,7 +72,7 @@ public class AlternateDimensions {
         (server, dimensionTypeHolder) -> new LevelStem(
             dimensionTypeHolder,
             createSkylandGenerator(
-                server.registryAccess(), server.getWorldData().worldGenOptions().seed()
+                server.registryAccess(), server.overworld().getSeed()
             )
         )
     );
@@ -82,7 +82,7 @@ public class AlternateDimensions {
         (server, dimensionTypeHolder) -> new LevelStem(
             dimensionTypeHolder,
             createSkylandGenerator(
-                server.registryAccess(), server.getWorldData().worldGenOptions().seed()
+                server.registryAccess(), server.overworld().getSeed()
             )
         )
     );
@@ -92,7 +92,7 @@ public class AlternateDimensions {
         (server, dimensionTypeHolder) -> new LevelStem(
             dimensionTypeHolder,
             createErrorTerrainGenerator(
-                server.getWorldData().worldGenOptions().seed(),
+                server.overworld().getSeed(),
                 server.registryAccess()
             )
         )
@@ -191,19 +191,19 @@ public class AlternateDimensions {
     
     public static ChunkGenerator createSkylandGenerator(RegistryAccess rm, long seed) {
         return NormalSkylandGenerator.create(
-            rm.lookupOrThrow(Registries.BIOME).asLookup(),
-            rm.lookupOrThrow(Registries.DENSITY_FUNCTION).asLookup(),
-            rm.lookupOrThrow(Registries.NOISE).asLookup(),
-            rm.lookupOrThrow(Registries.NOISE_SETTINGS).asLookup(),
-            rm.lookupOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST).asLookup(),
+            rm.lookupOrThrow(Registries.BIOME),
+            rm.lookupOrThrow(Registries.DENSITY_FUNCTION),
+            rm.lookupOrThrow(Registries.NOISE),
+            rm.lookupOrThrow(Registries.NOISE_SETTINGS),
+            rm.lookupOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST),
             seed
         );
     }
     
     public static ChunkGenerator createErrorTerrainGenerator(long seed, RegistryAccess rm) {
         return ErrorTerrainGenerator.create(
-            rm.lookupOrThrow(Registries.BIOME).asLookup(),
-            rm.lookupOrThrow(Registries.NOISE_SETTINGS).asLookup()
+            rm.lookupOrThrow(Registries.BIOME),
+            rm.lookupOrThrow(Registries.NOISE_SETTINGS)
         );
     }
     

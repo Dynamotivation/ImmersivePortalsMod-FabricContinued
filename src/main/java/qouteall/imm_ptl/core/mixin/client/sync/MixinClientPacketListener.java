@@ -33,8 +33,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import qouteall.imm_ptl.core.ClientWorldLoader;
 import qouteall.imm_ptl.core.IPGlobal;
 import qouteall.imm_ptl.core.ducks.IEClientPlayNetworkHandler;
-import qouteall.imm_ptl.core.ducks.IEPlayerPositionLookS2CPacket;
 import qouteall.imm_ptl.core.network.ImmPtlNetworkConfig;
+import qouteall.imm_ptl.core.network.ImmPtlNetworking;
 import qouteall.imm_ptl.core.teleportation.ClientTeleportationManager;
 import qouteall.q_misc_util.Helper;
 import qouteall.q_misc_util.my_util.CountDownInt;
@@ -101,7 +101,14 @@ public abstract class MixinClientPacketListener implements IEClientPlayNetworkHa
             return;
         }
         
-        ResourceKey<Level> packetDim = ((IEPlayerPositionLookS2CPacket) packet).ip_getPlayerDimension();
+        ResourceKey<Level> packetDim = ImmPtlNetworking.pendingPositionDimensions.remove(packet.id());
+        
+        if (packetDim == null) {
+            // this position packet does not come from a cross-dimensional portal teleport
+            return;
+        }
+        
+        Vec3 packetPos = packet.change().position();
         
         LocalPlayer player = Minecraft.getInstance().player;
         assert player != null;
@@ -109,22 +116,21 @@ public abstract class MixinClientPacketListener implements IEClientPlayNetworkHa
         
         if (packetDim != playerWorld.dimension()) {
             LOGGER.info(
-                "[ImmPtl] Client accepted position packet in another dimension. Packet: {} {} {} {}. Player: {} {} {} {}",
-                packetDim.identifier(), packet.getX(), packet.getY(), packet.getZ(),
-                playerWorld.dimension().identifier(), player.getX(), player.getY(), player.getZ()
+                "[ImmPtl] Client accepted position packet in another dimension. Packet: {} {}. Player: {} {}",
+                packetDim.identifier(), packetPos,
+                playerWorld.dimension().identifier(), player.position()
             );
             
             ClientTeleportationManager.forceTeleportPlayer(
-                packetDim,
-                new Vec3(packet.getX(), packet.getY(), packet.getZ())
+                packetDim, packetPos
             );
 
 //            ClientTeleportationManager.disableTeleportFor(2);
         }
         
         LOGGER.info(
-            "[ImmPtl] Client accepted position packet {} {} {} {}",
-            packetDim.identifier(), packet.getX(), packet.getY(), packet.getZ()
+            "[ImmPtl] Client accepted position packet {} {}",
+            packetDim.identifier(), packetPos
         );
     }
     
@@ -186,7 +192,7 @@ public abstract class MixinClientPacketListener implements IEClientPlayNetworkHa
             ClientLevel currentWorld = Minecraft.getInstance().level;
             for (ClientLevel clientWorld : ClientWorldLoader.getClientWorlds()) {
                 if (clientWorld != currentWorld) {
-                    clientWorld.setGameTime(packet.getGameTime());
+                    clientWorld.getLevelData().setGameTime(packet.gameTime());
                 }
             }
         }

@@ -238,7 +238,7 @@ public class PortalWandInteraction {
             }
         }
         
-        Portal portal = Portal.ENTITY_TYPE.create(McHelper.getServerWorld(firstSideDimension));
+        Portal portal = Portal.ENTITY_TYPE.create(McHelper.getServerWorld(firstSideDimension), net.minecraft.world.entity.EntitySpawnReason.MOB_SUMMONED);
         Validate.notNull(portal);
         portal.setOriginPos(
             firstSideLeftBottom

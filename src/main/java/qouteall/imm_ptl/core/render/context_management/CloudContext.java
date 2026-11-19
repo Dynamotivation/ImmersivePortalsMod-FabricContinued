@@ -42,10 +42,7 @@ public class CloudContext {
     }
     
     public void dispose() {
-        if (cloudsBuffer != null) {
-            cloudsBuffer.close();
-            cloudsBuffer = null;
-        }
+        // TODO(port): cloud mesh buffers are part of the deferred renderer redesign
     }
     
     @Nullable

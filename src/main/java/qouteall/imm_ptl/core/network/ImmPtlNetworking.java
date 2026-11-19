@@ -203,7 +203,7 @@ public class ImmPtlNetworking {
             }
             else {
                 // spawn new portal
-                Entity entity = entityType.create(world);
+                Entity entity = entityType.create(world, EntitySpawnReason.MOB_SUMMONED);
                 Validate.notNull(entity, "Entity type is null");
                 
                 if (!(entity instanceof Portal portal)) {
@@ -235,9 +235,54 @@ public class ImmPtlNetworking {
         }
     }
     
+    /**
+     * 26.x made {@link net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket} a record
+     * with a fixed codec, so the dimension can no longer be appended to it.
+     * This payload is sent right before the position packet and carries the dimension
+     * for the upcoming teleport id.
+     */
+    public static record PlayerPositionDimensionPacket(
+        int teleportId, ResourceKey<Level> dimension
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<PlayerPositionDimensionPacket> TYPE =
+            new CustomPacketPayload.Type<>(
+                McHelper.newResourceLocation("imm_ptl:player_position_dimension")
+            );
+        
+        public static final StreamCodec<FriendlyByteBuf, PlayerPositionDimensionPacket> CODEC =
+            StreamCodec.of(
+                (b, p) -> {
+                    b.writeVarInt(p.teleportId);
+                    b.writeResourceKey(p.dimension);
+                },
+                b -> new PlayerPositionDimensionPacket(
+                    b.readVarInt(), b.readResourceKey(Registries.DIMENSION)
+                )
+            );
+        
+        @Override
+        public @NotNull Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+        
+        @Environment(EnvType.CLIENT)
+        public void handleClient() {
+            pendingPositionDimensions.put(teleportId, dimension);
+        }
+    }
+    
+    // client side: teleport id -> dimension of the pending position packet
+    @Environment(EnvType.CLIENT)
+    public static final java.util.Map<Integer, ResourceKey<Level>> pendingPositionDimensions =
+        new java.util.concurrent.ConcurrentHashMap<>();
+    
     public static void init() {
         PayloadTypeRegistry.serverboundPlay().register(
             TeleportPacket.TYPE, TeleportPacket.CODEC
+        );
+        
+        PayloadTypeRegistry.clientboundPlay().register(
+            PlayerPositionDimensionPacket.TYPE, PlayerPositionDimensionPacket.CODEC
         );
         
         PayloadTypeRegistry.clientboundPlay().register(
@@ -255,6 +300,11 @@ public class ImmPtlNetworking {
     }
     
     public static void initClient() {
+        ClientPlayNetworking.registerGlobalReceiver(
+            PlayerPositionDimensionPacket.TYPE,
+            (packet, c) -> packet.handleClient()
+        );
+        
         ClientPlayNetworking.registerGlobalReceiver(
             GlobalPortalSyncPacket.TYPE,
             (packet, c) -> packet.handle()

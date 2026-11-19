@@ -44,7 +44,7 @@ public class CHelper {
     
     public static PlayerInfo getClientPlayerListEntry() {
         return Minecraft.getInstance().getConnection().getPlayerInfo(
-            Minecraft.getInstance().player.getGameProfile().getId()
+            Minecraft.getInstance().player.getGameProfile().id()
         );
     }
     
@@ -91,7 +91,7 @@ public class CHelper {
     }
     
     public static void printChat(Component text) {
-        Minecraft.getInstance().gui.getChat().addMessage(text);
+        Minecraft.getInstance().gui.hud.getChat().addMessage(text);
     }
     
     public static void openLinkConfirmScreen(
@@ -116,7 +116,7 @@ public class CHelper {
     }
     
     public static Vec3 getCurrentCameraPos() {
-        return Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        return Minecraft.getInstance().gameRenderer.mainCamera().getPosition();
     }
     
     public static Iterable<Entity> getWorldEntityList(Level world) {

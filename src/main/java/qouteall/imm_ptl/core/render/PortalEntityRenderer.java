@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -31,21 +30,6 @@ public class PortalEntityRenderer extends EntityRenderer<Portal> {
         MultiBufferSource bufferSource,
         int light
     ) {
-        
-        IPCGlobal.renderer.renderPortalInEntityRenderer(portal);
-        
-        if (OverlayRendering.shouldRenderOverlay(portal)) {
-            OverlayRendering.onRenderPortalEntity(portal, matrixStack, bufferSource);
-        }
-    
-        if (IPGlobal.debugRenderPortalShapeMesh && !PortalRendering.isRendering()) {
-            VertexConsumer lineVertexConsumer = bufferSource.getBuffer(RenderType.lines());
-            WireRenderingHelper.renderPortalShapeMeshDebug(
-                matrixStack, lineVertexConsumer, portal
-            );
-        }
-        
-        super.render(portal, yaw, partialTick, matrixStack, bufferSource, light);
     }
     
     @Override

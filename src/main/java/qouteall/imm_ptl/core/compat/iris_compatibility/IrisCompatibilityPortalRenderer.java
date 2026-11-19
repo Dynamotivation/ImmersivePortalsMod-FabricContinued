@@ -41,8 +41,6 @@ public class IrisCompatibilityPortalRenderer extends PortalRenderer {
     
     @Override
     public boolean replaceFrameBufferClearing() {
-        client.getMainRenderTarget().bindWrite(false);
-        
         return false;
     }
     
@@ -69,62 +67,9 @@ public class IrisCompatibilityPortalRenderer extends PortalRenderer {
     
     @Override
     public void prepareRendering() {
-        deferredBuffer.prepare();
-        
-        deferredBuffer.fb.setClearColor(1, 0, 0, 0);
-        deferredBuffer.fb.clear(Minecraft.ON_OSX);
-        
-        IPPortingLibCompat.setIsStencilEnabled(
-            client.getMainRenderTarget(), false
-        );
-        
-        // Iris now use vanilla framebuffer's depth
-        client.getMainRenderTarget().bindWrite(false);
     }
     
     protected void doRenderPortal(Portal portal, Matrix4f modelView) {
-        if (PortalRendering.isRendering()) {
-            // this renderer only supports one-layer portal
-            return;
-        }
-        
-        if (!testShouldRenderPortal(portal, modelView)) {
-            return;
-        }
-        
-        client.getMainRenderTarget().bindWrite(true);
-        
-        PortalRendering.pushPortalLayer(portal);
-        
-        renderPortalContent(portal);
-        
-        PortalRendering.popPortalLayer();
-        
-        CHelper.enableDepthClamp();
-        
-        if (!isDebugMode) {
-            // draw portal content to the deferred buffer
-            deferredBuffer.fb.bindWrite(true);
-            MyRenderHelper.drawPortalAreaWithFramebuffer(
-                portal,
-                client.getMainRenderTarget(),
-                modelView,
-                RenderSystem.getProjectionMatrix()
-            );
-        }
-        else {
-            deferredBuffer.fb.bindWrite(true);
-            MyRenderHelper.drawScreenFrameBuffer(
-                client.getMainRenderTarget(),
-                true, true
-            );
-        }
-        
-        CHelper.disableDepthClamp();
-        
-        RenderSystem.colorMask(true, true, true, true);
-        
-        client.getMainRenderTarget().bindWrite(true);
     }
     
     @Override
@@ -143,61 +88,11 @@ public class IrisCompatibilityPortalRenderer extends PortalRenderer {
     }
     
     private boolean testShouldRenderPortal(Portal portal, Matrix4f modelView) {
-        
-        //reset projection matrix
-//        client.gameRenderer.loadProjectionMatrix(RenderStates.basicProjectionMatrix);
-        
-        deferredBuffer.fb.bindWrite(true);
-        
-        return PortalRenderInfo.renderAndDecideVisibility(portal, () -> {
-            
-            ViewAreaRenderer.renderPortalArea(
-                portal, Vec3.ZERO,
-                modelView,
-                RenderSystem.getProjectionMatrix(),
-                true, false, false, true
-            );
-        });
+        return false;
     }
     
     @Override
     public void onBeforeHandRendering(Matrix4f modelView) {
-        if (PortalRendering.isRendering()) {
-            return;
-        }
-        
-        CHelper.checkGlError();
-        
-        // save the main framebuffer to deferredBuffer
-        IPIrisHelper.newCopyDepthStencil(
-            client.getMainRenderTarget(),
-            deferredBuffer.fb
-        );
-        IPIrisHelper.copyColor(
-            client.getMainRenderTarget(),
-            deferredBuffer.fb
-        );
-//        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, client.getMainRenderTarget().frameBufferId);
-//        GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, deferredBuffer.fb.frameBufferId);
-//        GL30.glBlitFramebuffer(
-//            0, 0, deferredBuffer.fb.width, deferredBuffer.fb.height,
-//            0, 0, deferredBuffer.fb.width, deferredBuffer.fb.height,
-//            GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT,
-//            GL_NEAREST
-//        );
-        
-        CHelper.checkGlError();
-        
-        renderPortals(passingModelView);
-        
-        RenderTarget mainFrameBuffer = client.getMainRenderTarget();
-        mainFrameBuffer.bindWrite(true);
-        
-        MyRenderHelper.drawScreenFrameBuffer(
-            deferredBuffer.fb,
-            false,
-            false
-        );
     }
     
     @Override

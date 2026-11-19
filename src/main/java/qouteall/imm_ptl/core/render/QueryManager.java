@@ -12,32 +12,7 @@ public class QueryManager {
     private static int idQueryObject = -1;
     
     public static boolean renderAndGetDoesAnySamplePass(Runnable renderingFunc) {
-        if (idQueryObject == -1) {
-            idQueryObject = GL15.glGenQueries();
-            CHelper.checkGlError();
-        }
-        
-        //mac does not support GL_ANY_SAMPLES_PASSED
-        if (Minecraft.ON_OSX) {
-            return renderAndGetSampleCountPassed(renderingFunc) > 0;
-        }
-        
-        assert (!isQuerying);
-        
-        GL15.glBeginQuery(GL33.GL_ANY_SAMPLES_PASSED, QueryManager.idQueryObject);
-        
-        isQuerying = true;
-        
-        renderingFunc.run();
-        
-        GL15.glEndQuery(GL33.GL_ANY_SAMPLES_PASSED);
-        
-        isQuerying = false;
-        
-        int result = GL15.glGetQueryObjecti(QueryManager.idQueryObject, GL15.GL_QUERY_RESULT);
-        queryStallCounter++;
-        
-        return result != 0;
+        return false;
     }
     
     public static int renderAndGetSampleCountPassed(Runnable renderingFunc) {

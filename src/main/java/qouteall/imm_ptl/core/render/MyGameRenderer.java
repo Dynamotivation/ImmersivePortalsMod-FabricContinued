@@ -11,7 +11,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.SectionBufferBuilderPack;
@@ -120,169 +119,6 @@ public class MyGameRenderer {
         int renderDistance,
         boolean doRenderHand
     ) {
-        if (!enablePortalCaveCulling) {
-            client.smartCull = false;
-        }
-        
-        if (!PortalRendering.shouldEnableSodiumCaveCulling()) {
-            client.smartCull = false;
-        }
-        
-        ResourceKey<Level> newDimension = newWorld.dimension();
-        
-        LevelRenderer worldRenderer = ClientWorldLoader.getWorldRenderer(newDimension);
-        
-        CHelper.checkGlError();
-        
-        IEGameRenderer ieGameRenderer = (IEGameRenderer) client.gameRenderer;
-        DimensionRenderHelper helper =
-            ClientWorldLoader.getDimensionRenderHelper(newDimension);
-        Camera newCamera = new Camera();
-        
-        // store old state
-        ClientLevel oldWorld = client.level;
-        LevelRenderer oldWorldRenderer = client.levelRenderer;
-        LightTexture oldLightmap = client.gameRenderer.lightTexture();
-        boolean oldNoClip = client.player.noPhysics;
-        boolean oldDoRenderHand = ieGameRenderer.ip_getDoRenderHand();
-        ObjectArrayList<SectionRenderDispatcher.RenderSection> oldChunkInfoList =
-            ((IEWorldRenderer) oldWorldRenderer).portal_getChunkInfoList();
-        HitResult oldCrosshairTarget = client.hitResult;
-        Camera oldCamera = client.gameRenderer.getMainCamera();
-        PostChain oldTransparencyShader = ((IEWorldRenderer) worldRenderer).portal_getTransparencyShader();
-        RenderBuffers oldRenderBuffers = ((IEWorldRenderer) worldRenderer).ip_getRenderBuffers();
-        RenderBuffers oldClientRenderBuffers = client.renderBuffers();
-        SectionBufferBuilderPack oldSectionRenderDispatcherFixedBuffers =
-            ((IESectionRenderDispatcher) worldRenderer.getSectionRenderDispatcher())
-                .ip_getFixedBuffers();
-        Frustum oldFrustum = ((IEWorldRenderer) worldRenderer).portal_getFrustum();
-        
-        // the projection matrix contains view bobbing.
-        // the view bobbing is related with scale
-        Matrix4f oldProjectionMatrix = RenderSystem.getProjectionMatrix();
-        Matrix4fStack oldModelViewStack = IERenderSystem.ip_getModelViewStack();
-        
-        ObjectArrayList<SectionRenderDispatcher.RenderSection> newChunkInfoList =
-            VisibleSectionDiscovery.takeList();
-        ((IEWorldRenderer) oldWorldRenderer).portal_setChunkInfoList(newChunkInfoList);
-        
-        Object irisPipeline = IrisInterface.invoker.getPipeline(worldRenderer);
-        
-        // switch (note: it will no longer switch the world that client player is in )
-        ((IEMinecraftClient) client).ip_setWorldRenderer(worldRenderer);
-        client.level = newWorld;
-        ieGameRenderer.ip_setLightmapTextureManager(helper.lightmapTexture);
-        
-        client.getBlockEntityRenderDispatcher().level = newWorld;
-        client.player.noPhysics = true;
-        client.gameRenderer.setRenderHand(doRenderHand);
-        
-        FogRendererContext.swappingManager.pushSwapping(newDimension);
-        ((IEParticleManager) client.particleEngine).ip_setWorld(newWorld);
-        if (BlockManipulationClient.remotePointedDim == newDimension) {
-            client.hitResult = BlockManipulationClient.remoteHitResult;
-        }
-        if (!PortalRendering.shouldRenderHitResult()) {
-            client.hitResult = null;
-        }
-        ieGameRenderer.ip_setCamera(newCamera);
-        
-        RenderBuffers newRenderBuffers = null;
-        if (IPGlobal.useSecondaryEntityVertexConsumer) {
-            newRenderBuffers = acquireRenderBuffersObject();
-            if (newRenderBuffers != null) {
-                ((IEWorldRenderer) worldRenderer).ip_setRenderBuffers(newRenderBuffers);
-                ((IEMinecraftClient) client).ip_setRenderBuffers(newRenderBuffers);
-                
-                /*
-                  the vanilla buffer pack may be used by {@link net.minecraft.client.renderer.MultiBufferSource.BufferSource}
-                  The BufferSource does not always immediately finish building.
-                  Reusing that may cause "Already Building" error in Buffer Builder when doing main-thread chunk rebuilding.
-                  This does not occur in vanilla because vanilla does main-thread chunk rebuilding before entity rendering. With portal rendering it could do chunk rebuilding after some entity rendering.
-                 */
-                ((IESectionRenderDispatcher) worldRenderer.getSectionRenderDispatcher())
-                    .ip_setFixedBuffers(newRenderBuffers.fixedBufferPack());
-            }
-            else{
-                // draw the content in the buffers,
-                // to avoid messing with content in the portals
-                // TODO it may draw with wrong stencil func here
-                client.renderBuffers().bufferSource().endBatch();
-            }
-        }
-        
-        Object newSodiumContext = SodiumInterface.invoker.createNewContext(renderDistance);
-        SodiumInterface.invoker.switchContextWithCurrentWorldRenderer(newSodiumContext);
-        
-        ((IEWorldRenderer) worldRenderer).portal_setTransparencyShader(null);
-        
-        IERenderSystem.ip_setModelViewStack(new Matrix4fStack(16));
-        RenderSystem.applyModelViewMatrix();
-        
-        IrisInterface.invoker.setPipeline(worldRenderer, null);
-        
-        //update lightmap
-        if (!RenderStates.isDimensionRendered(newDimension)) {
-            helper.lightmapTexture.updateLightTexture(0);
-        }
-        
-        //invoke rendering
-        invokeWrapper.accept(() -> {
-            Profiler.get().push("render_portal_content");
-            client.gameRenderer.renderLevel(
-                client.getTimer()
-            );
-            Profiler.get().pop();
-        });
-        
-        SodiumInterface.invoker.switchContextWithCurrentWorldRenderer(newSodiumContext);
-        
-        //recover
-        
-        ((IEMinecraftClient) client).ip_setWorldRenderer(oldWorldRenderer);
-        client.level = oldWorld;
-        ieGameRenderer.ip_setLightmapTextureManager(oldLightmap);
-        client.getBlockEntityRenderDispatcher().level = oldWorld;
-        client.player.noPhysics = oldNoClip;
-        client.gameRenderer.setRenderHand(oldDoRenderHand);
-        
-        ((IEParticleManager) client.particleEngine).ip_setWorld(oldWorld);
-        client.hitResult = oldCrosshairTarget;
-        ieGameRenderer.ip_setCamera(oldCamera);
-        
-        ((IEWorldRenderer) worldRenderer).portal_setTransparencyShader(oldTransparencyShader);
-        
-        FogRendererContext.swappingManager.popSwapping();
-        
-        ((IEWorldRenderer) oldWorldRenderer).portal_setChunkInfoList(oldChunkInfoList);
-        VisibleSectionDiscovery.returnList(newChunkInfoList);
-        
-        ((IEWorldRenderer) worldRenderer).ip_setRenderBuffers(oldRenderBuffers);
-        ((IEMinecraftClient) client).ip_setRenderBuffers(oldClientRenderBuffers);
-        ((IESectionRenderDispatcher) worldRenderer.getSectionRenderDispatcher())
-            .ip_setFixedBuffers(oldSectionRenderDispatcherFixedBuffers);
-        if (newRenderBuffers != null) {
-            returnRenderBuffersObject(newRenderBuffers);
-        }
-        
-        ((IEWorldRenderer) worldRenderer).portal_setFrustum(oldFrustum);
-        
-        client.gameRenderer.resetProjectionMatrix(oldProjectionMatrix);
-        IERenderSystem.ip_setModelViewStack(oldModelViewStack);
-        RenderSystem.applyModelViewMatrix();
-        
-        IrisInterface.invoker.setPipeline(worldRenderer, irisPipeline);
-        
-        client.getEntityRenderDispatcher()
-            .prepare(
-                client.level,
-                oldCamera,
-                client.crosshairPickEntity
-            );
-        
-        CHelper.checkGlError();
-        
-        client.smartCull = true;
     }
     
     /**
@@ -290,31 +126,9 @@ public class MyGameRenderer {
      */
     @IPVanillaCopy
     public static void resetFogState() {
-        Camera camera = client.gameRenderer.getMainCamera();
-        float g = client.gameRenderer.getRenderDistance();
-        
-        Vec3 cameraPos = camera.getPosition();
-        double x = cameraPos.x();
-        double y = cameraPos.y();
-        double z = cameraPos.z();
-        
-        boolean isFoggy = client.level.effects().isFoggyAt(Mth.floor(x), Mth.floor(y)) ||
-            client.gui.getBossOverlay().shouldCreateWorldFog();
-        
-        FogRenderer.setupFog(
-            camera, FogRenderer.FogMode.FOG_TERRAIN, Math.max(g, 32.0F), isFoggy, RenderStates.getPartialTick()
-        );
-        FogRenderer.levelFogColor();
     }
     
     public static void updateFogColor() {
-        FogRenderer.setupColor(
-            client.gameRenderer.getMainCamera(),
-            RenderStates.getPartialTick(),
-            client.level,
-            client.options.getEffectiveRenderDistance(),
-            client.gameRenderer.getDarkenWorldAmount(RenderStates.getPartialTick())
-        );
     }
     
     /**
@@ -322,14 +136,6 @@ public class MyGameRenderer {
      */
     @IPVanillaCopy
     public static void resetDiffuseLighting() {
-        ClientLevel world = client.level;
-        assert world != null;
-        if (world.effects().constantAmbientLight()) {
-            Lighting.setupNetherLevel();
-        }
-        else {
-            Lighting.setupLevel();
-        }
     }
     
     

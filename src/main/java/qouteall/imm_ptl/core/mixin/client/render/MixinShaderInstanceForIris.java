@@ -1,7 +1,5 @@
 package qouteall.imm_ptl.core.mixin.client.render;
 
-import com.mojang.blaze3d.shaders.Program;
-import net.minecraft.client.renderer.ShaderInstance;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -21,9 +19,6 @@ public class MixinShaderInstanceForIris {
         )
     )
     private static Map redirectGetProgramCache(Program.Type type) {
-        if (ClientWorldLoader.getIsInitialized()) {
-            return new HashMap();
-        }
-        return type.getPrograms();
+        return null;
     }
 }

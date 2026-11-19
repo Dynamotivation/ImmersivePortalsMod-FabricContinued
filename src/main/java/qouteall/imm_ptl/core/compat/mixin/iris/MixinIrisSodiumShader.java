@@ -1,11 +1,7 @@
 package qouteall.imm_ptl.core.compat.mixin.iris;
 
-import net.caffeinemc.mods.sodium.client.gl.shader.uniform.GlUniformFloat4v;
-import net.caffeinemc.mods.sodium.client.render.chunk.shader.ShaderBindingContext;
 import net.irisshaders.iris.gl.blending.BlendModeOverride;
 import net.irisshaders.iris.pipeline.IrisRenderingPipeline;
-import net.irisshaders.iris.pipeline.programs.SodiumPrograms;
-import net.irisshaders.iris.pipeline.programs.SodiumShader;
 import net.irisshaders.iris.uniforms.custom.CustomUniforms;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -20,21 +16,12 @@ import java.util.function.Supplier;
 
 @Mixin(value = SodiumShader.class, remap = false)
 public class MixinIrisSodiumShader {
-    @Unique
-    private GlUniformFloat4v uIPClippingEquation;
     
     @Inject(
         method = "<init>",
         at = @At("RETURN")
     )
     private void onInit(IrisRenderingPipeline pipeline, SodiumPrograms.Pass pass, ShaderBindingContext context, int handle, BlendModeOverride blendModeOverride, List bufferBlendOverrides, CustomUniforms customUniforms, Supplier flipState, float alphaTest, boolean containsTessellation, CallbackInfo ci) {
-        
-        this.uIPClippingEquation = context.bindUniformOptional("iportal_ClippingEquation", GlUniformFloat4v::new);
-        if (this.uIPClippingEquation != null) {
-            Helper.LOGGER.info("Found iportal_ClippingEquation in program {}", handle);
-        } else {
-            Helper.LOGGER.info("iportal_ClippingEquation not found in program {}", handle);
-        }
     }
     
     @Inject(

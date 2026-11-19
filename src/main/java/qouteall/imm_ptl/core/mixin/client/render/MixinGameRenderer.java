@@ -9,7 +9,6 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import org.joml.Matrix4f;
 import org.joml.Quaternionfc;
 import org.slf4j.Logger;
@@ -41,10 +40,6 @@ import qouteall.q_misc_util.Helper;
 
 @Mixin(GameRenderer.class)
 public abstract class MixinGameRenderer implements IEGameRenderer {
-    @Shadow
-    @Final
-    @Mutable
-    private LightTexture lightTexture;
     
     @Shadow
     private boolean renderHand;
@@ -282,22 +277,7 @@ public abstract class MixinGameRenderer implements IEGameRenderer {
         )
     )
     private Matrix4f redirectGetBasicProjectionMatrix(GameRenderer instance, double fov) {
-        if (PortalRendering.isRendering()) {
-            if (RenderStates.basicProjectionMatrix != null) {
-                // replace the basic projection matrix
-                // copy to avoid unwanted modification
-                return new Matrix4f(RenderStates.basicProjectionMatrix);
-            }
-            else {
-                LOGGER.error("[iPortal] Projection matrix state abnormal");
-            }
-        }
-        
-        Matrix4f result = instance.getProjectionMatrix(fov);
-        // copy to avoid unwanted modification
-        RenderStates.basicProjectionMatrix = new Matrix4f(result);
-        
-        return result;
+        return null;
     }
     
     @WrapOperation(
@@ -317,7 +297,6 @@ public abstract class MixinGameRenderer implements IEGameRenderer {
     
     @Override
     public void ip_setLightmapTextureManager(LightTexture manager) {
-        lightTexture = manager;
     }
     
     @Override

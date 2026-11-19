@@ -87,72 +87,10 @@ public class RenderStates {
     public static void updatePreRenderInfo(
         float newPartialTick
     ) {
-        ClientWorldLoader.initializeIfNeeded();
-        
-        Entity cameraEntity = MyRenderHelper.client.cameraEntity;
-        
-        if (cameraEntity == null) {
-            return;
-        }
-        
-        originalPlayerDimension = cameraEntity.level().dimension();
-        originalPlayerPos = cameraEntity.position();
-        originalPlayerLastTickPos = McHelper.lastTickPosOf(cameraEntity);
-        PlayerInfo entry = CHelper.getClientPlayerListEntry();
-        originalGameMode = entry != null ? entry.getGameMode() : GameType.CREATIVE;
-        partialTick = newPartialTick;
-        
-        renderedDimensions.clear();
-        lastPortalRenderInfos = portalRenderInfos;
-        portalRenderInfos = new ArrayList<>();
-        portalsRenderedThisFrame = 0;
-        
-        FogRendererContext.update();
-        
-        renderStartNanoTime = System.nanoTime();
-        
-        updateViewBobbingFactor(cameraEntity);
-        
-        basicProjectionMatrix = null;
-        originalCamera = MyRenderHelper.client.gameRenderer.getMainCamera();
-        
-        updateIsLaggy();
-        
-        ForceMainThreadRebuild.onPreRender();
-        
-        debugText = "";
-//        debugText = originalCamera.getPos().toString();
-        
-        QueryManager.queryStallCounter = 0;
-        
-        Vec3 velocity = McHelper.getWorldVelocity(cameraEntity);
-        originalPlayerBoundingBox = cameraEntity.getBoundingBox().expandTowards(
-            -velocity.x, -velocity.y, -velocity.z
-        );
     }
     
     //protect the player from mirror room lag attack
     private static void updateIsLaggy() {
-        if (!IPGlobal.lagAttackProof) {
-            isLaggy = false;
-            return;
-        }
-        if (isLaggy) {
-            if (ClientPerformanceMonitor.getMinimumFps() > 15) {
-                isLaggy = false;
-            }
-        }
-        else {
-            if (lastPortalRenderInfos.size() > 10) {
-                if (ClientPerformanceMonitor.getAverageFps() < 8 || ClientPerformanceMonitor.getMinimumFps() < 6) {
-                    MyRenderHelper.client.gui.setOverlayMessage(
-                        Component.translatable("imm_ptl.laggy"),
-                        false
-                    );
-                    isLaggy = true;
-                }
-            }
-        }
     }
     
     private static void updateViewBobbingFactor(Entity cameraEntity) {
@@ -205,19 +143,6 @@ public class RenderStates {
     }
     
     public static void onTotalRenderEnd() {
-        Minecraft client = Minecraft.getInstance();
-        IEGameRenderer gameRenderer = (IEGameRenderer) Minecraft.getInstance().gameRenderer;
-        gameRenderer.ip_setLightmapTextureManager(ClientWorldLoader
-            .getDimensionRenderHelper(client.level.dimension()).lightmapTexture);
-        
-        Vec3 currCameraPos = client.gameRenderer.getMainCamera().getPosition();
-        cameraPosDelta = currCameraPos.subtract(lastCameraPos);
-        if (cameraPosDelta.lengthSqr() > 1) {
-            cameraPosDelta = Vec3.ZERO;
-        }
-        lastCameraPos = currCameraPos;
-        
-        
     }
     
     public static int getRenderedPortalNum() {

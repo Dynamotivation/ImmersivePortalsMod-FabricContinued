@@ -66,47 +66,7 @@ public class FogRendererContext {
     public static Vec3 getFogColorOf(
         ClientLevel destWorld, Vec3 pos
     ) {
-        Minecraft client = Minecraft.getInstance();
-        
-        Profiler.get().push("get_fog_color");
-        
-        ClientLevel oldWorld = client.level;
-        
-        ResourceKey<Level> newWorldKey = destWorld.dimension();
-        
-        swappingManager.contextMap.computeIfAbsent(
-            newWorldKey,
-            k -> new StaticFieldsSwappingManager.ContextRecord<>(
-                k, new FogRendererContext(), true
-            )
-        );
-        
-        swappingManager.pushSwapping(newWorldKey);
-        client.level = destWorld;
-        
-        Camera newCamera = new Camera();
-        ((IECamera) newCamera).portal_setPos(pos);
-        ((IECamera) newCamera).portal_setFocusedEntity(client.cameraEntity);
-        
-        try {
-            FogRenderer.setupColor(
-                newCamera,
-                RenderStates.getPartialTick(),
-                destWorld,
-                client.options.getEffectiveRenderDistance(),
-                client.gameRenderer.getDarkenWorldAmount(RenderStates.getPartialTick())
-            );
-            
-            Vec3 result = getCurrentFogColor.get();
-            
-            return result;
-        }
-        finally {
-            swappingManager.popSwapping();
-            client.level = oldWorld;
-            
-            Profiler.get().pop();
-        }
+        return null;
     }
     
     public static void onPlayerTeleport(ResourceKey<Level> from, ResourceKey<Level> to) {

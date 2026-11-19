@@ -1,10 +1,5 @@
 package qouteall.imm_ptl.core.compat.mixin.sodium;
 
-import net.caffeinemc.mods.sodium.client.gl.shader.uniform.GlUniformFloat3v;
-import net.caffeinemc.mods.sodium.client.gl.shader.uniform.GlUniformFloat4v;
-import net.caffeinemc.mods.sodium.client.render.chunk.shader.ChunkShaderOptions;
-import net.caffeinemc.mods.sodium.client.render.chunk.shader.DefaultShaderInterface;
-import net.caffeinemc.mods.sodium.client.render.chunk.shader.ShaderBindingContext;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Unique;
@@ -16,8 +11,6 @@ import qouteall.imm_ptl.core.render.FrontClipping;
 @Pseudo
 @Mixin(value = DefaultShaderInterface.class, remap = false)
 public class MixinSodiumDefaultShaderInterface {
-    @Unique
-    private GlUniformFloat4v uIPClippingEquation;
     
     @Inject(
         method = "<init>",
@@ -28,7 +21,6 @@ public class MixinSodiumDefaultShaderInterface {
     private void onInit(
         ShaderBindingContext context, ChunkShaderOptions options, CallbackInfo ci
     ) {
-        this.uIPClippingEquation = context.bindUniformOptional("iportal_ClippingEquation", GlUniformFloat4v::new);
     }
 
     @Inject(

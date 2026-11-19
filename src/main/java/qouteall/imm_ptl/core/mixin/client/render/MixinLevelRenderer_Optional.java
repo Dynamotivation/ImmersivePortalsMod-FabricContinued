@@ -42,10 +42,7 @@ public class MixinLevelRenderer_Optional {
         require = 0
     )
     private RenderType redirectGetTranslucent() {
-        if (PortalRendering.isRendering()) {
-            return null;
-        }
-        return RenderType.translucent();
+        return null;
     }
     
     //the camera position is used for translucent sort
@@ -61,12 +58,6 @@ public class MixinLevelRenderer_Optional {
     private void onSetChunkBuilderCameraPosition(
         SectionRenderDispatcher chunkBuilder, Vec3 cameraPosition
     ) {
-        if (PortalRendering.isRendering()) {
-            if (minecraft.level.dimension() == RenderStates.originalPlayerDimension) {
-                return;
-            }
-        }
-        chunkBuilder.setCamera(cameraPosition);
     }
     
     @Inject(

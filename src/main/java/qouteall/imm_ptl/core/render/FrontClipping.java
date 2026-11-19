@@ -4,7 +4,6 @@ import com.mojang.blaze3d.opengl.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -140,27 +139,7 @@ public class FrontClipping {
     
     // "double @Nullable []" is weird...
     private static double @Nullable [] getClipEquationOuter(Portal portal) {
-        @Nullable Plane outerClipping = portal.getPortalShape()
-            .getOuterClipping(portal.getThisSideState());
-        
-        if (outerClipping == null) {
-            return null;
-        }
-        
-        Vec3 planeNormal = outerClipping.normal();
-        
-        Vec3 cameraPos = client.gameRenderer.getMainCamera().getPosition();
-        
-        Vec3 portalPos = outerClipping.pos()
-            .subtract(cameraPos);
-        
-        //equation: planeNormal * p + c > 0
-        //-planeNormal * portalCenter = c
-        double c = planeNormal.scale(-1).dot(portalPos);
-        
-        return new double[]{
-            planeNormal.x, planeNormal.y, planeNormal.z, c
-        };
+        return null;
     }
     
     public static double[] getActiveClipPlaneEquationBeforeModelView() {
@@ -174,46 +153,8 @@ public class FrontClipping {
     public static void updateClippingEquationUniformForCurrentShader(
         boolean isRenderingEntities
     ) {
-        if (!IPGlobal.enableClippingMechanism) {
-            return;
-        }
-        
-        ShaderInstance shader = RenderSystem.getShader();
-        
-        if (shader == null) {
-            return;
-        }
-        
-        Uniform clippingEquationUniform = ((IEShader) shader).ip_getClippingEquationUniform();
-        if (clippingEquationUniform != null) {
-            if (isClippingEnabled) {
-                double[] equation = activeClipPlaneEquationBeforeModelView;
-//                double[] equation = isRenderingEntities ? activeClipPlaneAfterModelView : activeClipPlaneEquationBeforeModelView;
-                clippingEquationUniform.set(
-                    (float) equation[0], (float) equation[1],
-                    (float) equation[2], (float) equation[3]
-                );
-            }
-            else {
-                clippingEquationUniform.set(0f, 0f, 0f, 1f);
-            }
-        }
     }
     
     public static void unsetClippingUniform() {
-        if (!IPGlobal.enableClippingMechanism) {
-            return;
-        }
-        
-        ShaderInstance shader = RenderSystem.getShader();
-        
-        if (shader == null) {
-            return;
-        }
-        
-        Uniform clippingEquationUniform = ((IEShader) shader).ip_getClippingEquationUniform();
-        if (clippingEquationUniform != null) {
-            clippingEquationUniform.set(0f, 0f, 0f, 1f);
-        }
     }
 }

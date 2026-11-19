@@ -24,10 +24,6 @@ public class MixinSectionBufferBuilderPack {
         )
     )
     private static int redirectBufferSize(RenderType instance) {
-        if (!IPGlobal.saveMemoryInBufferPack) {
-            return instance.bufferSize();
-        }
-        
-        return Math.min(128, instance.bufferSize());
+        return 0;
     }
 }

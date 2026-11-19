@@ -34,15 +34,7 @@ public class RendererUsingStencil extends PortalRenderer {
     
     @Override
     public boolean replaceFrameBufferClearing() {
-        boolean skipClearing = WorldRenderInfo.isRendering();
-        if (skipClearing) {
-            if (WorldRenderInfo.getTopRenderInfo().doRenderSky) {
-                RenderSystem.depthMask(false);
-                MyRenderHelper.renderScreenTriangle(FogRendererContext.getCurrentFogColor.get());
-                RenderSystem.depthMask(true);
-            }
-        }
-        return skipClearing;
+        return false;
     }
     
     @Override
@@ -51,23 +43,6 @@ public class RendererUsingStencil extends PortalRenderer {
     }
     
     protected void doPortalRendering(Matrix4f modelView) {
-        // NOTE do not use glDisable(GL_DEPTH_TEST),
-        // use GlStateManager.disableDepthTest() instead
-        // because GlStateManager will cache its state.
-        // Do not make its cache not synchronized
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthMask(true);
-        
-        Profiler.get().popPush("render_portal_total");
-        renderPortals(modelView);
-        if (PortalRendering.isRendering()) {
-            setStencilStateForWorldRendering();
-        }
-        else {
-            // don't do it in finishRendering()
-            // as it will render outer world's transparent things later
-            myFinishRendering();
-        }
     }
     
     protected void renderPortals(Matrix4f modelView) {
@@ -90,22 +65,6 @@ public class RendererUsingStencil extends PortalRenderer {
     
     @Override
     public void prepareRendering() {
-        if (!IPPortingLibCompat.getIsStencilEnabled(client.getMainRenderTarget())) {
-            IPPortingLibCompat.setIsStencilEnabled(client.getMainRenderTarget(), true);
-            
-            if (Minecraft.useShaderTransparency()) {
-//                client.worldRenderer.reload();
-            }
-        }
-        
-        client.getMainRenderTarget().bindWrite(false);
-        
-        GL11.glClearStencil(0);
-        GL11.glClear(GL11.GL_STENCIL_BUFFER_BIT);
-        
-        GlStateManager._enableDepthTest();
-        GL11.glEnable(GL_STENCIL_TEST);
-        
     }
     
     @Override
@@ -176,29 +135,6 @@ public class RendererUsingStencil extends PortalRenderer {
     private void renderPortalViewAreaToStencil(
         Portal portal, Matrix4f modelView
     ) {
-        int outerPortalStencilValue = PortalRendering.getPortalLayer();
-        
-        //is the mask here different from the mask of glStencilMask?
-        GL11.glStencilFunc(GL_EQUAL, outerPortalStencilValue, 0xFF);
-        
-        //if stencil and depth test pass, the data in stencil buffer will increase by 1
-        GL11.glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
-        //NOTE about GL_INCR:
-        //if multiple triangles occupy the same pixel and passed stencil and depth tests,
-        //its stencil value will still increase by one
-        
-        GL11.glStencilMask(0xFF);
-        
-        // update it before pushing
-        FrontClipping.updateInnerClipping(modelView);
-        
-        ViewAreaRenderer.renderPortalArea(
-            portal, Vec3.ZERO,
-            modelView,
-            RenderSystem.getProjectionMatrix(),
-            true, true,
-            true, true
-        );
     }
     
     private void clearDepthOfThePortalViewArea(
@@ -233,22 +169,6 @@ public class RendererUsingStencil extends PortalRenderer {
         Portal portal, Matrix4f modelView,
         int portalStencilValue
     ) {
-        setStencilLimitation(portalStencilValue);
-        
-        int originalDepthFunc = GL11.glGetInteger(GL_DEPTH_FUNC);
-        
-        GL11.glDepthFunc(GL_ALWAYS);
-        
-        ViewAreaRenderer.renderPortalArea(
-            portal, Vec3.ZERO,
-            modelView,
-            RenderSystem.getProjectionMatrix(),
-            false, false,
-            true,
-            true // important: should clip, otherwise depth will be abnormal when viewing scale box from inside in portal
-        );
-        
-        GL11.glDepthFunc(originalDepthFunc);
     }
     
     public static void clampStencilValue(

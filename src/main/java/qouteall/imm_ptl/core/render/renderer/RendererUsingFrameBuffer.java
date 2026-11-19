@@ -45,56 +45,12 @@ public class RendererUsingFrameBuffer extends PortalRenderer {
     
     @Override
     public void prepareRendering() {
-        secondaryFrameBuffer.prepare();
-        
-        GlStateManager._enableDepthTest();
-        
-        GL11.glDisable(GL11.GL_STENCIL_TEST);
-    
-        IPPortingLibCompat.setIsStencilEnabled(client.getMainRenderTarget(), false);
-//        ((IEFrameBuffer) client.getMainRenderTarget()).setIsStencilBufferEnabledAndReload(false);
     }
     
     protected void doRenderPortal(
         Portal portal,
         Matrix4f modelView
     ) {
-        if (PortalRendering.isRendering()) {
-            //only support one-layer portal
-            return;
-        }
-        
-        if (!testShouldRenderPortal(portal, modelView)) {
-            return;
-        }
-        
-        PortalRendering.pushPortalLayer(portal);
-        
-        RenderTarget oldFrameBuffer = client.getMainRenderTarget();
-        
-        ((IEMinecraftClient) client).ip_setFrameBuffer(secondaryFrameBuffer.fb);
-        secondaryFrameBuffer.fb.bindWrite(true);
-        
-        GlStateManager._clearColor(1, 0, 1, 1);
-        GlStateManager._clearDepth(1);
-        GlStateManager._clear(
-            GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT,
-            Minecraft.ON_OSX
-        );
-        GL11.glDisable(GL11.GL_STENCIL_TEST);
-        
-        renderPortalContent(portal);
-        
-        ((IEMinecraftClient) client).ip_setFrameBuffer(oldFrameBuffer);
-        oldFrameBuffer.bindWrite(true);
-        
-        PortalRendering.popPortalLayer();
-        
-        CHelper.enableDepthClamp();
-        renderSecondBufferIntoMainBuffer(portal, modelView);
-        CHelper.disableDepthClamp();
-        
-        MyRenderHelper.debugFramebufferDepth();
     }
     
     @Override
@@ -111,25 +67,10 @@ public class RendererUsingFrameBuffer extends PortalRenderer {
         Portal portal,
         Matrix4f modelView
     ) {
-        FrontClipping.updateInnerClipping(modelView);
-        return QueryManager.renderAndGetDoesAnySamplePass(() -> {
-            ViewAreaRenderer.renderPortalArea(
-                portal, Vec3.ZERO,
-                modelView,
-                RenderSystem.getProjectionMatrix(),
-                true, true,
-                true, true
-            );
-        });
+        return false;
     }
     
     private void renderSecondBufferIntoMainBuffer(Portal portal, Matrix4f modelView) {
-        MyRenderHelper.drawPortalAreaWithFramebuffer(
-            portal,
-            secondaryFrameBuffer.fb,
-            modelView,
-            RenderSystem.getProjectionMatrix()
-        );
     }
     
     protected void renderPortals(Matrix4f modelView) {

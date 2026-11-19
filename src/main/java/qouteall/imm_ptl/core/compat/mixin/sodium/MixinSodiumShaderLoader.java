@@ -3,8 +3,6 @@ package qouteall.imm_ptl.core.compat.mixin.sodium;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
-import com.mojang.blaze3d.shaders.Program;
-import net.caffeinemc.mods.sodium.client.gl.shader.ShaderLoader;
 import com.mojang.blaze3d.shaders.ShaderType;
 import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,11 +26,6 @@ public abstract class MixinSodiumShaderLoader {
         Operation<String> operation,
         @Local(argsOnly = true) ShaderType shaderType
     ) {
-        String shaderSource = operation.call(name);
-        shaderSource = ShaderCodeTransformation.transform(
-            shaderType == ShaderType.VERTEX ? Program.Type.VERTEX : Program.Type.FRAGMENT,
-            name.toString(), shaderSource
-        );
-        return shaderSource;
+        return null;
     }
 }

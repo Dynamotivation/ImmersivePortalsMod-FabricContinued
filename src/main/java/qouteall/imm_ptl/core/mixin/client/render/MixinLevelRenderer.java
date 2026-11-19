@@ -6,7 +6,6 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexBuffer;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
@@ -15,8 +14,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.ViewArea;
@@ -107,21 +104,9 @@ public abstract class MixinLevelRenderer implements IEWorldRenderer {
     @Shadow
     private Frustum cullingFrustum;
     
-    @Shadow
-    @Nullable
-    private VertexBuffer starBuffer;
     
-    @Shadow
-    @Nullable
-    private VertexBuffer skyBuffer;
     
-    @Shadow
-    @Nullable
-    private VertexBuffer darkBuffer;
     
-    @Shadow
-    @Nullable
-    private VertexBuffer cloudBuffer;
     
     @Shadow
     protected abstract void deinitTransparency();
@@ -192,10 +177,6 @@ public abstract class MixinLevelRenderer implements IEWorldRenderer {
     private void onAfterTranslucentRendering(
         DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f modelView, Matrix4f matrix4f2, CallbackInfo ci
     ) {
-        IPCGlobal.renderer.onAfterTranslucentRendering(modelView);
-        
-        // make hand rendering normal
-        Lighting.setupLevel();
     }
     
     @Inject(
@@ -256,26 +237,6 @@ public abstract class MixinLevelRenderer implements IEWorldRenderer {
         Camera camera, Frustum frustum, boolean hasForcedFrustum, boolean spectator,
         CallbackInfo ci
     ) {
-        if (WorldRenderInfo.isRendering()) {
-            if (level.dimension() != RenderStates.originalPlayerDimension) {
-                sectionRenderDispatcher.setCamera(camera.getPosition());
-            }
-        }
-        
-        if (ip_allowOverrideTerrainSetup()) {
-            if (WorldRenderInfo.isRendering()) {
-                Profiler.get().push("ip_terrain_setup");
-                VisibleSectionDiscovery.discoverVisibleSections(
-                    level, ((ImmPtlViewArea) viewArea),
-                    camera,
-                    new Frustum(frustum).offsetToFullyIncludeCameraCube(8),
-                    visibleSections
-                );
-                Profiler.get().pop();
-                
-                ci.cancel();
-            }
-        }
     }
     
     private boolean ip_allowOverrideTerrainSetup() {
@@ -330,9 +291,6 @@ public abstract class MixinLevelRenderer implements IEWorldRenderer {
         )
     )
     private void redirectClearing(int int_1, boolean boolean_1) {
-        if (!IPCGlobal.renderer.replaceFrameBufferClearing()) {
-            RenderSystem.clear(int_1, boolean_1);
-        }
     }
     
     @Redirect(
@@ -348,16 +306,7 @@ public abstract class MixinLevelRenderer implements IEWorldRenderer {
         int int_1,
         LevelRenderer worldRenderer_1
     ) {
-        if (IPCGlobal.useHackedChunkRenderDispatcher) {
-            return new ImmPtlViewArea(
-                chunkBuilder_1, world_1, int_1, worldRenderer_1
-            );
-        }
-        else {
-            return new ViewArea(
-                chunkBuilder_1, world_1, int_1, worldRenderer_1
-            );
-        }
+        return null;
     }
     
     // @Inject does not allow getting the entity reference
@@ -576,13 +525,7 @@ public abstract class MixinLevelRenderer implements IEWorldRenderer {
     }
     
     private boolean ip_isChunkCompiled(ImmPtlViewArea immPtlViewArea, BlockPos blockPos) {
-        SectionPos sectionPos = SectionPos.of(blockPos);
-        var renderChunk = immPtlViewArea.rawGet(
-            sectionPos.x(), sectionPos.y(), sectionPos.z()
-        );
-        
-        return renderChunk != null
-            && renderChunk.compiled.get() != SectionRenderDispatcher.CompiledSection.UNCOMPILED;
+        return false;
     }
     
     @Override

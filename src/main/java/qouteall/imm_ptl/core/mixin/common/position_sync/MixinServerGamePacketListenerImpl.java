@@ -220,12 +220,17 @@ public abstract class MixinServerGamePacketListenerImpl implements IEServerPlayN
     }
     
     @Inject(
-        method = "isPlayerCollidingWithAnythingNew", at = @At("HEAD"), cancellable = true
+        method = "isEntityCollidingWithAnythingNew", at = @At("HEAD"), cancellable = true
     )
     private void onIsPlayerCollidingWithAnythingNew(
-        LevelReader level, AABB playerBB, double newX, double newY, double newZ, CallbackInfoReturnable<Boolean> cir
+        LevelReader level, net.minecraft.world.entity.Entity entity,
+        AABB playerBB, double newX, double newY, double newZ, CallbackInfoReturnable<Boolean> cir
     ) {
         if (!IPGlobal.crossPortalCollision) {
+            return;
+        }
+        
+        if (entity != this.player) {
             return;
         }
         

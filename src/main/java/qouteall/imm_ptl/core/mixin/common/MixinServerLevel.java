@@ -42,15 +42,15 @@ public abstract class MixinServerLevel implements IEServerWorld {
         method = "Lnet/minecraft/server/level/ServerLevel;tick(Ljava/util/function/BooleanSupplier;)V",
         at = @At(
             value = "INVOKE",
-            target = "Ljava/util/List;isEmpty()Z"
+            target = "Lnet/minecraft/server/level/ServerChunkCache;hasActiveTickets()Z"
         )
     )
-    private boolean redirectIsEmpty(List list) {
+    private boolean redirectIsEmpty(net.minecraft.server.level.ServerChunkCache chunkSource) {
         final ServerLevel this_ = (ServerLevel) (Object) this;
         if (ImmPtlChunkTracking.shouldLoadDimension(this_.dimension())) {
-            return false;
+            return true;
         }
-        return list.isEmpty();
+        return chunkSource.hasActiveTickets();
     }
     
     // for debug

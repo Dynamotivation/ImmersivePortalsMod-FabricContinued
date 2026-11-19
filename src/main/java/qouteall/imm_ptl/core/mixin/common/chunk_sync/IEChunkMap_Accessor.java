@@ -8,5 +8,5 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(ChunkMap.class)
 public interface IEChunkMap_Accessor {
     @Accessor("visibleChunkMap")
-    Iterable<ChunkHolder> ip_getChunks();
+    it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap<ChunkHolder> ip_getChunks();
 }

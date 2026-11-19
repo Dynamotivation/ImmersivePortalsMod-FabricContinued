@@ -129,13 +129,8 @@ public class NormalSkylandGenerator extends NoiseBasedChunkGenerator {
             intrinsicSkylandNGS.noiseSettings(),
             intrinsicSkylandNGS.defaultBlock(),
             intrinsicSkylandNGS.defaultFluid(),
-            IENoiseRouterData.ip_noNewCaves(
-                densityFunctionHolderGetter,
-                noiseParametersHolderGetter,
-                IENoiseRouterData.ip_slideEndLike(IENoiseRouterData.ip_getFunction(
-                    densityFunctionHolderGetter, IENoiseRouterData.get_BASE_3D_NOISE_END()
-                ), 0, 128)
-            ),
+            // TODO(26.2): vanilla removed noNewCaves; the original end-like skyland router is not restored yet
+            intrinsicSkylandNGS.noiseRouter(),
             intrinsicSkylandNGS.surfaceRule(),
             intrinsicSkylandNGS.spawnTarget(),
             0, // overwrite seaLevel

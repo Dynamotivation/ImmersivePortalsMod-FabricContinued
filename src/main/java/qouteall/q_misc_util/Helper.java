@@ -637,7 +637,7 @@ public class Helper {
     
     public static Vec3 getVec3d(CompoundTag compoundTag, String name) {
         return new Vec3(
-            compoundTag.getDouble(name + "X"),
+            compoundTag.getDoubleOr(name + "X", 0.0),
             compoundTag.getDouble(name + "Y"),
             compoundTag.getDouble(name + "Z")
         );
@@ -661,7 +661,7 @@ public class Helper {
     
     public static BlockPos getVec3i(CompoundTag compoundTag, String name) {
         return new BlockPos(
-            compoundTag.getInt(name + "X"),
+            compoundTag.getIntOr(name + "X", 0),
             compoundTag.getInt(name + "Y"),
             compoundTag.getInt(name + "Z")
         );
@@ -680,7 +680,7 @@ public class Helper {
     public static DQuaternion getQuaternion(CompoundTag compoundTag, String name) {
         if (compoundTag.contains(name + "X")) {
             return new DQuaternion(
-                compoundTag.getDouble(name + "X"),
+                compoundTag.getDoubleOr(name + "X", 0.0),
                 compoundTag.getDouble(name + "Y"),
                 compoundTag.getDouble(name + "Z"),
                 compoundTag.getDouble(name + "W")
@@ -933,7 +933,7 @@ public class Helper {
             return null;
         }
         
-        return new UUID(tag.getLongOr(key1, 0L), tag.getLong(key + "Least"));
+        return new UUID(tag.getLongOr(key1, 0L), tag.getLongOr(key + "Least", 0L));
     }
     
     public static Vec3 getFlippedVec(Vec3 vec, Vec3 flippingAxis) {

@@ -457,7 +457,7 @@ public class McHelper {
             return;
         }
         
-        entityTracker.broadcastAndSend(packet);
+        entityTracker.sendToTrackingPlayersAndSelf(packet);
     }
     
     //it's a little bit incorrect with corner glass pane

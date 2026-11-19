@@ -106,7 +106,7 @@ public class CustomTextOverlay {
         int guiScaledWidth = minecraft.getWindow().getGuiScaledWidth();
         int guiScaledHeight = minecraft.getWindow().getGuiScaledHeight();
         
-        Font font = minecraft.gui.getFont();
+        Font font = minecraft.gui.hud.getFont();
         
         Profiler.get().push("imm_ptl_custom_overlay");
         if (renderAtBottomCenter) {

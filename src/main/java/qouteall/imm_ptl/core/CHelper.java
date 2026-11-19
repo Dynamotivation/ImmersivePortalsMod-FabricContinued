@@ -91,7 +91,7 @@ public class CHelper {
     }
     
     public static void printChat(Component text) {
-        Minecraft.getInstance().gui.hud.getChat().addMessage(text);
+        Minecraft.getInstance().gui.hud.getChat().addClientSystemMessage(text);
     }
     
     public static void openLinkConfirmScreen(
@@ -116,7 +116,7 @@ public class CHelper {
     }
     
     public static Vec3 getCurrentCameraPos() {
-        return Minecraft.getInstance().gameRenderer.mainCamera().getPosition();
+        return Minecraft.getInstance().gameRenderer.mainCamera().position();
     }
     
     public static Iterable<Entity> getWorldEntityList(Level world) {

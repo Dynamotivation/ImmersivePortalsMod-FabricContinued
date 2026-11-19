@@ -151,7 +151,7 @@ public class DimStackManagement {
                             chunk.setBlockState(
                                 mutable,
                                 replacement,
-                                false
+                                0
                             );
                         }
                     }
@@ -168,7 +168,7 @@ public class DimStackManagement {
         Collection<ResourceKey<Level>> extra =
             DimensionStackAPI.DIMENSION_STACK_CANDIDATE_COLLECTION_EVENT
                 .invoker().getExtraDimensionKeys(
-                    server.registryAccess(), server.getWorldData().worldGenOptions()
+                    server.registryAccess(), server.getWorldGenSettings().options()
                 );
         
         result.addAll(extra);

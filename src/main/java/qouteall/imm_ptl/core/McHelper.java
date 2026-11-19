@@ -320,9 +320,9 @@ public class McHelper {
         // minecarts, boats and LivingEntity use position interpolation
         // don't make interpolate, or it may interpolate into unloaded chunks
         vehicle.setPos(newVehiclePos.x(), newVehiclePos.y(), newVehiclePos.z());
-        vehicle.lerpTo(
+        vehicle.snapTo(
             newVehiclePos.x(), newVehiclePos.y(), newVehiclePos.z(),
-            vehicle.getYRot(), vehicle.getXRot(), 0
+            vehicle.getYRot(), vehicle.getXRot()
         );
         
         McHelper.setPosAndLastTickPos(
@@ -424,8 +424,8 @@ public class McHelper {
     
     public static MutableComponent getLinkText(String link) {
         return Component.literal(link).withStyle(
-            style -> style.withClickEvent(new ClickEvent(
-                ClickEvent.Action.OPEN_URL, link
+            style -> style.withClickEvent(new ClickEvent.OpenUrl(
+                java.net.URI.create(link)
             )).withUnderlined(true)
         );
     }
@@ -435,7 +435,7 @@ public class McHelper {
     }
     
     public static void invokeCommandAs(Entity commandSender, List<String> commandList) {
-        CommandSourceStack commandSource = commandSender.createCommandSourceStack().withPermission(2).withSuppressedOutput();
+        CommandSourceStack commandSource = commandSender.createCommandSourceStackForNameResolution((net.minecraft.server.level.ServerLevel) commandSender.level()).withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.GAMEMASTER).withSuppressedOutput();
         MinecraftServer server = commandSender.level().getServer();
         assert server != null;
         Commands commandManager = server.getCommands();
@@ -457,7 +457,10 @@ public class McHelper {
             return;
         }
         
-        entityTracker.sendToTrackingPlayersAndSelf(packet);
+        @SuppressWarnings("unchecked")
+        Packet<? super net.minecraft.network.protocol.game.ClientGamePacketListener> clientPacket =
+            (Packet<? super net.minecraft.network.protocol.game.ClientGamePacketListener>) packet;
+        entityTracker.sendToTrackingPlayersAndSelf(clientPacket);
     }
     
     //it's a little bit incorrect with corner glass pane

@@ -1,6 +1,5 @@
 package qouteall.imm_ptl.core;
 
-import com.mojang.blaze3d.opengl.GlUtil;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -289,8 +288,7 @@ public class IPMcHelper {
         String command
     ) {
         return component.withStyle(
-            style -> style.withClickEvent(new ClickEvent(
-                ClickEvent.Action.RUN_COMMAND,
+            style -> style.withClickEvent(new ClickEvent.RunCommand(
                 command
             )).withUnderlined(true)
         );
@@ -312,7 +310,7 @@ public class IPMcHelper {
     
     @Environment(EnvType.CLIENT)
     public static boolean isNvidiaVideocard() {
-        return GlUtil.getVendor().toLowerCase().contains("nvidia");
+        return com.mojang.blaze3d.systems.RenderSystem.getDevice().getDeviceInfo().vendorName().toLowerCase().contains("nvidia");
     }
     
     public static FriendlyByteBuf bytesToBuf(byte[] packetBytes) {

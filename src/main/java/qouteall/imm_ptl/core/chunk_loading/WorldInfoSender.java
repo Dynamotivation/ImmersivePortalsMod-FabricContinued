@@ -51,13 +51,8 @@ public class WorldInfoSender {
         PacketRedirection.sendRedirectedMessage(
             player,
             remoteDimension,
-            new ClientboundSetTimePacket(
-                world.getGameTime(),
-                world.getDayTime(),
-                world.getGameRules().getBoolean(
-                    GameRules.RULE_DAYLIGHT
-                )
-            )
+            // time is a global clock system in 26.x
+            world.getServer().clockManager().createFullSyncPacket()
         );
         
         /**{@link net.minecraft.client.network.ClientPlayNetworkHandler#onGameStateChange(GameStateChangeS2CPacket)}*/

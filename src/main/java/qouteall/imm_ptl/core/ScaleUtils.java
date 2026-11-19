@@ -153,9 +153,11 @@ public class ScaleUtils {
         
         if (!entity.level().isClientSide() && isScaleIllegal(newScale)) {
             newScale = 1;
-            entity.sendSystemMessage(
-                Component.literal("Scale out of range")
-            );
+            if (entity instanceof net.minecraft.world.entity.player.Player player) {
+                player.sendSystemMessage(
+                    Component.literal("Scale out of range")
+                );
+            }
         }
         
         ScaleUtils.setIPortalScaling(entity, newScale);

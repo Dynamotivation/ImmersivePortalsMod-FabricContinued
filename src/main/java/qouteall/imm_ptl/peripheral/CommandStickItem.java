@@ -75,8 +75,8 @@ public class CommandStickItem extends Item {
         
         public static Data deserialize(CompoundTag tag) {
             return new Data(
-                tag.getString("command"),
-                tag.getString("nameTranslationKey"),
+                tag.getStringOr("command", ""),
+                tag.getStringOr("nameTranslationKey", ""),
                 tag.getListOrEmpty("descriptionTranslationKeys")
                     .stream()
                     .map(tag1 -> ((StringTag) tag1).value())
@@ -124,7 +124,7 @@ public class CommandStickItem extends Item {
                 return;
             }
             
-            CommandSourceStack commandSource = ((ServerPlayer) player).createCommandSourceStack().withPermission(2);
+            CommandSourceStack commandSource = ((ServerPlayer) player).createCommandSourceStack().withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.GAMEMASTER);
             
             MinecraftServer server = player.level().getServer();
             assert server != null;

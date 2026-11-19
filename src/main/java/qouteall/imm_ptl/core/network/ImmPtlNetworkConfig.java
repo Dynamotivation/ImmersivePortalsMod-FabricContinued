@@ -157,7 +157,7 @@ public class ImmPtlNetworkConfig {
         public void handle(
             ServerConfigurationNetworking.Context context
         ) {
-            ServerConfigurationPacketListenerImpl networkHandler = context.networkHandler();
+            ServerConfigurationPacketListenerImpl networkHandler = context.packetListener();
             
             GameProfile gameProfile =
                 ((IEServerConfigurationPacketListenerImpl) networkHandler).ip_getGameProfile();

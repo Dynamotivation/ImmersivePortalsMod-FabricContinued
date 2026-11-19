@@ -639,7 +639,7 @@ public class Helper {
         return new Vec3(
             compoundTag.getDoubleOr(name + "X", 0.0),
             compoundTag.getDoubleOr(name + "Y", 0.0),
-            compoundTag.getDouble(name + "Z")
+            compoundTag.getDoubleOr(name + "Z", 0.0)
         );
     }
     
@@ -663,7 +663,7 @@ public class Helper {
         return new BlockPos(
             compoundTag.getIntOr(name + "X", 0),
             compoundTag.getIntOr(name + "Y", 0),
-            compoundTag.getInt(name + "Z")
+            compoundTag.getIntOr(name + "Z", 0)
         );
     }
     
@@ -682,8 +682,8 @@ public class Helper {
             return new DQuaternion(
                 compoundTag.getDoubleOr(name + "X", 0.0),
                 compoundTag.getDoubleOr(name + "Y", 0.0),
-                compoundTag.getDouble(name + "Z"),
-                compoundTag.getDouble(name + "W")
+                compoundTag.getDoubleOr(name + "Z", 0.0),
+                compoundTag.getDoubleOr(name + "W", 0.0)
             );
         }
         else {

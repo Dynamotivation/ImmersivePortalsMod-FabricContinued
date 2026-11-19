@@ -1,10 +1,9 @@
 package qouteall.imm_ptl.peripheral;
 
+import qouteall.imm_ptl.core.IPRegistryHelper;
 import com.mojang.serialization.MapCodec;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
-import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
@@ -32,13 +31,13 @@ import java.util.function.BiConsumer;
 public class PeripheralModMain {
     
     public static final Block portalHelperBlock =
-        new Block(FabricBlockSettings.of().noOcclusion().isRedstoneConductor((a, b, c) -> false));
+        new Block(IPRegistryHelper.blockProps("portal_helper").noOcclusion().isRedstoneConductor((a, b, c) -> false));
     
     public static final BlockItem portalHelperBlockItem =
-        new PortalHelperItem(PeripheralModMain.portalHelperBlock, new Item.Properties());
+        new PortalHelperItem(PeripheralModMain.portalHelperBlock, IPRegistryHelper.itemProps("portal_helper").useBlockDescriptionPrefix());
     
     public static final CreativeModeTab TAB =
-        FabricItemGroup.builder()
+        CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0)
             .icon(() -> new ItemStack(PortalWandItem.instance))
             .title(Component.translatable("imm_ptl.item_group"))
             .displayItems((enabledFeatures, entries) -> {

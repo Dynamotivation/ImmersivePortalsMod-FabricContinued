@@ -1,5 +1,6 @@
 package qouteall.imm_ptl.peripheral.wand;
 
+import qouteall.imm_ptl.core.IPRegistryHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.serialization.Codec;
 import net.fabricmc.api.EnvType;
@@ -33,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PortalWandItem extends Item {
-    public static final PortalWandItem instance = new PortalWandItem(new Properties());
+    public static final PortalWandItem instance = new PortalWandItem(IPRegistryHelper.itemProps("portal_wand"));
     
     public static void init() {
         Registry.register(

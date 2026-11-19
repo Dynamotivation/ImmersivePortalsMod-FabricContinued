@@ -1,5 +1,6 @@
 package qouteall.imm_ptl.core.portal;
 
+import qouteall.imm_ptl.core.IPRegistryHelper;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.profiling.Profiler;
 import net.fabricmc.api.EnvType;
@@ -55,7 +56,7 @@ public class PortalPlaceholderBlock extends Block {
     );
     
     public static final PortalPlaceholderBlock instance = new PortalPlaceholderBlock(
-        BlockBehaviour.Properties.of()
+        IPRegistryHelper.blockProps("nether_portal_block")
             .noCollision()
             .sound(SoundType.GLASS)
             .strength(1.0f, 0)

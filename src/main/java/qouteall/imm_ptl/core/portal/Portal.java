@@ -1865,7 +1865,7 @@ public class Portal extends Entity implements
         
         return McHelper.isServerChunkFullyLoaded(
             (ServerLevel) getDestWorld(),
-            new ChunkPos(BlockPos.containing(getDestPos()))
+            ChunkPos.containing(BlockPos.containing(getDestPos()))
         );
     }
     

@@ -410,7 +410,7 @@ public class McHelper {
      * Only check whether the region file exists now.
      */
     public static boolean getDoesRegionFileExist(ResourceKey<Level> toDimension, BlockPos toPos) {
-        ChunkPos chunkPos = new ChunkPos(toPos);
+        ChunkPos chunkPos = ChunkPos.containing(toPos);
         
         LevelStorageSource.LevelStorageAccess storageSource = MiscHelper.getServer().storageSource;
         

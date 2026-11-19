@@ -203,7 +203,7 @@ public class ImmPtlChunkTickets {
             if (!resultNow.isSuccess()) {
                 LOGGER.error(
                     "Chunk loading failure {} {} {}",
-                    world, new ChunkPos(chunkPos)
+                    world, ChunkPos.unpack(chunkPos)
                 );
             }
             
@@ -225,7 +225,7 @@ public class ImmPtlChunkTickets {
                         waitingForLoading.add(chunkPos);
                     }
                     else {
-                        LOGGER.warn("Chunk {} is not in the queue", new ChunkPos(chunkPos));
+                        LOGGER.warn("Chunk {} is not in the queue", ChunkPos.unpack(chunkPos));
                     }
                 }
             }
@@ -237,7 +237,7 @@ public class ImmPtlChunkTickets {
             return;
         }
         
-        ChunkPos chunkPosObj = new ChunkPos(chunkPos);
+        ChunkPos chunkPosObj = ChunkPos.unpack(chunkPos);
         distanceManager.addRegionTicket(
             TICKET_TYPE, chunkPosObj, getLoadingRadius(), chunkPosObj
         );
@@ -266,7 +266,7 @@ public class ImmPtlChunkTickets {
                     .remove(chunkPos);
                 
                 if (!pendingTicketAdding) {
-                    ChunkPos chunkPosObj = new ChunkPos(chunkPos);
+                    ChunkPos chunkPosObj = ChunkPos.unpack(chunkPos);
                     distanceManager.removeRegionTicket(
                         TICKET_TYPE, chunkPosObj, getLoadingRadius(), chunkPosObj
                     );
@@ -304,7 +304,7 @@ public class ImmPtlChunkTickets {
             List<Ticket<?>> toRemove = tickets.stream()
                 .filter(t -> t.getType() == TICKET_TYPE).toList();
             
-            ChunkPos chunkPos = new ChunkPos(pos);
+            ChunkPos chunkPos = ChunkPos.unpack(pos);
             for (Ticket<?> ticket : toRemove) {
                 ticketManager.removeRegionTicket(TICKET_TYPE, chunkPos, ticket.getTicketLevel(), chunkPos);
             }

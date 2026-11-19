@@ -837,12 +837,6 @@ C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qoute
 @Mixin(EndDragonFight.class)
        ^
   symbol: class EndDragonFight
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\api\example\ExampleGuiPortalRendering.java:84: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                world.dimension(), new ChunkPos(BlockPos.containing(pos))
-                                   ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\api\example\ExampleGuiPortalRendering.java:112: error: constructor TextureTarget in class TextureTarget cannot be applied to given types;
                 frameBuffer = new TextureTarget(2, 2, true, true);
                               ^
@@ -980,12 +974,6 @@ C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qoute
       (actual and formal argument lists differ in length)
     method Direction.getNearest(Vec3i,@org.jspecify.annotations.Nullable Direction) is not applicable
       (actual and formal argument lists differ in length)
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\portal\Portal.java:1868: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-            new ChunkPos(BlockPos.containing(getDestPos()))
-            ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\q_misc_util\my_util\IntBox.java:57: error: cannot find symbol
                 ).getNormal(),
                  ^
@@ -1137,105 +1125,21 @@ C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qoute
                                                    ^
   symbol:   method getMainCamera()
   location: variable gameRenderer of type GameRenderer
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ChunkVisibility.java:116: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                    new ChunkPos(BlockPos.containing(
-                    ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ChunkVisibility.java:135: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                    new ChunkPos(BlockPos.containing(portal.getDestPos()))
-                    ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ChunkVisibility.java:160: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                    new ChunkPos(BlockPos.containing(transformedPos))
-                    ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ChunkVisibility.java:169: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                    new ChunkPos(BlockPos.containing(portal.getDestPos()))
-                    ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:63: error: invalid method reference
         TicketType.create("imm_ptl", Comparator.comparingLong(ChunkPos::toLong));
                                                               ^
   cannot find symbol
     symbol:   method toLong()
     location: class ChunkPos
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:206: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                    world, new ChunkPos(chunkPos)
-                           ^
-  required: int,int
-  found:    long
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:228: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                        LOGGER.warn("Chunk {} is not in the queue", new ChunkPos(chunkPos));
-                                                                    ^
-  required: int,int
-  found:    long
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:240: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-        ChunkPos chunkPosObj = new ChunkPos(chunkPos);
-                               ^
-  required: int,int
-  found:    long
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:269: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                    ChunkPos chunkPosObj = new ChunkPos(chunkPos);
-                                           ^
-  required: int,int
-  found:    long
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:300: error: type Ticket does not take parameters
             SortedArraySet<Ticket<?>> tickets = ((IEDistanceManager) getDistanceManager(world))
                                  ^
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:304: error: type Ticket does not take parameters
             List<Ticket<?>> toRemove = tickets.stream()
                        ^
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:307: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-            ChunkPos chunkPos = new ChunkPos(pos);
-                                ^
-  required: int,int
-  found:    long
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:308: error: type Ticket does not take parameters
             for (Ticket<?> ticket : toRemove) {
                        ^
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:269: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                                        new ChunkPos(record.chunkPos)
-                                        ^
-  required: int,int
-  found:    long
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:511: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                        oldPlayer, dim, new ClientboundForgetLevelChunkPacket(new ChunkPos(chunkPos))
-                                                                              ^
-  required: int,int
-  found:    long
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:534: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                dim, new ClientboundForgetLevelChunkPacket(new ChunkPos(chunkPos))
-                                                           ^
-  required: int,int
-  found:    long
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:621: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-        ChunkPos lowPos = new ChunkPos(box.l);
-                          ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:622: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-        ChunkPos highPos = new ChunkPos(box.h);
-                           ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\PlayerChunkLoading.java:225: error: cannot find symbol
             AttachmentChange.partitionAndSendPackets(changes, player);
                             ^
@@ -1570,24 +1474,6 @@ C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qoute
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\q_misc_util\my_util\Mesh2D.java:1718: error: incompatible types: Optional<Double> cannot be converted to double
                 pointCoords.getDouble(p0Index * 2),
                                      ^
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\commands\PortalDebugCommands.java:255: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                    ChunkPos center = new ChunkPos(BlockPos.containing(player.position()));
-                                      ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\commands\PortalDebugCommands.java:271: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                            ChunkPos center = new ChunkPos(BlockPos.containing(player.position()));
-                                              ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\commands\PortalDebugCommands.java:369: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                        ChunkPos chunkPos = new ChunkPos(pos);
-                                            ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\commands\PortalDebugCommands.java:462: error: type TicketType does not take parameters
                 Object2IntOpenHashMap<TicketType<?>> stat = new Object2IntOpenHashMap<>();
                                                 ^
@@ -2410,12 +2296,6 @@ C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qoute
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\McHelper.java:403: error: incompatible types: CompoundTag cannot be converted to ValueOutput
         newPortal.load(portal.saveWithoutId(new CompoundTag()));
                                             ^
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\McHelper.java:413: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-        ChunkPos chunkPos = new ChunkPos(toPos);
-                            ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\McHelper.java:425: error: ClickEvent is abstract; cannot be instantiated
             style -> style.withClickEvent(new ClickEvent(
                                           ^
@@ -2920,12 +2800,6 @@ C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qoute
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\mixin\common\collision\MixinEntity.java:275: error: isClientSide has private access in Level
         if (level.isClientSide) {
                  ^
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\mixin\common\collision\MixinEntity.java:336: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                    this.chunkPosition = new ChunkPos(this.blockPosition);
-                                         ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\mixin\common\entity_sync\MixinServerPlayer.java:27: error: constructor Player in class Player cannot be applied to given types;
         super(level, blockPos, f, gameProfile);
         ^
@@ -2955,12 +2829,6 @@ C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qoute
       (actual and formal argument lists differ in length)
     method LivingEntity.setLastHurtByPlayer(EntityReference<Player>,int) is not applicable
       (actual and formal argument lists differ in length)
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\mixin\common\other_sync\MixinPlayerList.java:113: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-        ChunkPos chunkPos = new ChunkPos(BlockPos.containing(new Vec3(x, y, z)));
-                            ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\mixin\common\position_sync\MixinServerGamePacketListenerImpl.java:202: error: cannot find symbol
         double xBase = relativeAttrs.contains(RelativeMovement.X) ? this.player.getX() : 0.0;
                                               ^
@@ -3500,12 +3368,6 @@ C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qoute
       (actual and formal argument lists differ in length)
     method EntityType.create(EntityType<?>,ValueInput,Level,EntitySpawnReason) is not applicable
       (actual and formal argument lists differ in length)
-C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\portal\nether_portal\NetherPortalGeneration.java:174: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-            new DimensionalChunkPos(toDimension, new ChunkPos(toPos)), loaderRadius
-                                                 ^
-  required: int,int
-  found:    BlockPos
-  reason: actual and formal argument lists differ in length
 C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\portal\PortalManipulation.java:91: error: no suitable method found for create(Level)
         T newPortal = entityType.create(world);
                                 ^
@@ -4814,7 +4676,7 @@ Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
 Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-948 errors
+925 errors
 2 warnings
 
 > Task :compileJava FAILED
@@ -6447,12 +6309,6 @@ Execution failed for task ':compileJava' (registered by plugin class 'org.gradle
               k = Mth.positiveModulo(k, this.sectionGridSizeZ);
                                             ^
     symbol: variable sectionGridSizeZ
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\api\example\ExampleGuiPortalRendering.java:84: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                  world.dimension(), new ChunkPos(BlockPos.containing(pos))
-                                     ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
   C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\api\example\ExampleGuiPortalRendering.java:112: error: constructor TextureTarget in class TextureTarget cannot be applied to given types;
                   frameBuffer = new TextureTarget(2, 2, true, true);
                                 ^
@@ -6483,12 +6339,6 @@ Execution failed for task ':compileJava' (registered by plugin class 'org.gradle
     required: String
     found:    String,int
     reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\portal\Portal.java:1868: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-              new ChunkPos(BlockPos.containing(getDestPos()))
-              ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
   C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\portal\animation\PortalAnimation.java:78: error: method getList in class CompoundTag cannot be applied to given types;
               ListTag listTag = tag.getList("thisSideAnimations", 10);
                                    ^
@@ -6500,90 +6350,6 @@ Execution failed for task ':compileJava' (registered by plugin class 'org.gradle
                                    ^
     required: String
     found:    String,int
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ChunkVisibility.java:116: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                      new ChunkPos(BlockPos.containing(
-                      ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ChunkVisibility.java:135: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                      new ChunkPos(BlockPos.containing(portal.getDestPos()))
-                      ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ChunkVisibility.java:160: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                      new ChunkPos(BlockPos.containing(transformedPos))
-                      ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ChunkVisibility.java:169: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                      new ChunkPos(BlockPos.containing(portal.getDestPos()))
-                      ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:206: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                      world, new ChunkPos(chunkPos)
-                             ^
-    required: int,int
-    found:    long
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:228: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                          LOGGER.warn("Chunk {} is not in the queue", new ChunkPos(chunkPos));
-                                                                      ^
-    required: int,int
-    found:    long
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:240: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-          ChunkPos chunkPosObj = new ChunkPos(chunkPos);
-                                 ^
-    required: int,int
-    found:    long
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:269: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                      ChunkPos chunkPosObj = new ChunkPos(chunkPos);
-                                             ^
-    required: int,int
-    found:    long
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTickets.java:307: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-              ChunkPos chunkPos = new ChunkPos(pos);
-                                  ^
-    required: int,int
-    found:    long
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:269: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                                          new ChunkPos(record.chunkPos)
-                                          ^
-    required: int,int
-    found:    long
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:511: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                          oldPlayer, dim, new ClientboundForgetLevelChunkPacket(new ChunkPos(chunkPos))
-                                                                                ^
-    required: int,int
-    found:    long
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:534: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                  dim, new ClientboundForgetLevelChunkPacket(new ChunkPos(chunkPos))
-                                                             ^
-    required: int,int
-    found:    long
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:621: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-          ChunkPos lowPos = new ChunkPos(box.l);
-                            ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\chunk_loading\ImmPtlChunkTracking.java:622: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-          ChunkPos highPos = new ChunkPos(box.h);
-                             ^
-    required: int,int
-    found:    BlockPos
     reason: actual and formal argument lists differ in length
   C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\q_misc_util\my_util\Mesh2D.java:1697: error: method getList in class CompoundTag cannot be applied to given types;
           ListTag pointCoords = tag.getList("pointCoords", Tag.TAG_DOUBLE);
@@ -6597,35 +6363,11 @@ Execution failed for task ':compileJava' (registered by plugin class 'org.gradle
     required: String
     found:    String,byte
     reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\commands\PortalDebugCommands.java:255: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                      ChunkPos center = new ChunkPos(BlockPos.containing(player.position()));
-                                        ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\commands\PortalDebugCommands.java:271: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                              ChunkPos center = new ChunkPos(BlockPos.containing(player.position()));
-                                                ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\commands\PortalDebugCommands.java:369: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                          ChunkPos chunkPos = new ChunkPos(pos);
-                                              ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
   C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\portal\PortalPlaceholderBlock.java:127: error: method updateShape in class BlockBehaviour cannot be applied to given types;
           return super.updateShape(
                       ^
     required: BlockState,LevelReader,ScheduledTickAccess,BlockPos,Direction,BlockPos,BlockState,RandomSource
     found:    BlockState,Direction,BlockState,LevelAccessor,BlockPos,BlockPos
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\McHelper.java:413: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-          ChunkPos chunkPos = new ChunkPos(toPos);
-                              ^
-    required: int,int
-    found:    BlockPos
     reason: actual and formal argument lists differ in length
   C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\mixin\client\render\framebuffer\MixinMainTarget.java:23: error: constructor RenderTarget in class RenderTarget cannot be applied to given types;
           super(useDepth);
@@ -6659,23 +6401,11 @@ Execution failed for task ':compileJava' (registered by plugin class 'org.gradle
     reason: actual and formal argument lists differ in length
     where R is a type-variable:
       R extends Runnable declared in class ReentrantBlockableEventLoop
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\mixin\common\collision\MixinEntity.java:336: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-                      this.chunkPosition = new ChunkPos(this.blockPosition);
-                                           ^
-    required: int,int
-    found:    BlockPos
-    reason: actual and formal argument lists differ in length
   C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\mixin\common\entity_sync\MixinServerPlayer.java:27: error: constructor Player in class Player cannot be applied to given types;
           super(level, blockPos, f, gameProfile);
           ^
     required: Level,GameProfile
     found:    Level,BlockPos,float,GameProfile
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\mixin\common\other_sync\MixinPlayerList.java:113: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-          ChunkPos chunkPos = new ChunkPos(BlockPos.containing(new Vec3(x, y, z)));
-                              ^
-    required: int,int
-    found:    BlockPos
     reason: actual and formal argument lists differ in length
   C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\platform_specific\IPModEntryClient.java:58: error: method register in class EntityRendererRegistry cannot be applied to given types;
           EntityRendererRegistry.register(
@@ -6710,12 +6440,6 @@ Execution failed for task ':compileJava' (registered by plugin class 'org.gradle
                                ^
     required: String
     found:    String,int
-    reason: actual and formal argument lists differ in length
-  C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\portal\nether_portal\NetherPortalGeneration.java:174: error: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-              new DimensionalChunkPos(toDimension, new ChunkPos(toPos)), loaderRadius
-                                                   ^
-    required: int,int
-    found:    BlockPos
     reason: actual and formal argument lists differ in length
   C:\Users\Daniel\Documents\Minecraft-Mods\ImmersivePortalsMod\src\main\java\qouteall\imm_ptl\core\render\GuiPortalRendering.java:104: error: method resize in class RenderTarget cannot be applied to given types;
               renderTarget.resize(mcFB.width, mcFB.height, true);
@@ -9634,7 +9358,7 @@ Execution failed for task ':compileJava' (registered by plugin class 'org.gradle
   Note: Some input files use unchecked or unsafe operations.
   Note: Recompile with -Xlint:unchecked for details.
   Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-  948 errors
+  925 errors
   2 warnings
 
 * Try:

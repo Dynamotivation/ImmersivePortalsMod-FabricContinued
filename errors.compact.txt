@@ -180,11 +180,10 @@ qouteall/imm_ptl/core/mixin/client/render/shader/MixinShaderInstance.java:18: ca
 qouteall/imm_ptl/core/mixin/client/sync/MixinReceivingLevelScreen.java:6: cannot find symbol | symbol: class ReceivingLevelScreen
 qouteall/imm_ptl/core/mixin/common/chunk_sync/IEChunkTaskPriorityQueueSorter.java:9: cannot find symbol | symbol: class ChunkTaskPriorityQueueSorter
 qouteall/imm_ptl/core/mixin/common/miscellaneous/IEEndDragonFight.java:8: cannot find symbol | symbol: class EndDragonFight
-qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:84: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:112: constructor TextureTarget in class TextureTarget cannot be applied to given types;
+qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:112: constructor TextureTarget in class TextureTarget cannot be applied to given types; | found:    int,int,boolean,boolean
 qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:146: method does not override or implement a method from a supertype
 qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:207: method does not override or implement a method from a supertype
-qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:209: method keyPressed in class Screen cannot be applied to given types;
+qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:209: method keyPressed in class Screen cannot be applied to given types; | found:    int,int,int
 qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:213: no suitable method found for matches(int,int)
 qouteall/imm_ptl/core/portal/nether_portal/FastBlockAccess.java:40: cannot find symbol | symbol:   method getMinSection() | location: variable world of type Level
 qouteall/imm_ptl/core/portal/nether_portal/FastBlockAccess.java:43: cannot find symbol | symbol:   method getMaxSection() | location: variable world of type Level
@@ -195,9 +194,9 @@ qouteall/imm_ptl/core/api/PortalAPI.java:58: cannot find symbol | symbol:   meth
 qouteall/imm_ptl/core/portal/Portal.java:83: Portal is not abstract and does not override abstract method addAdditionalSaveData(ValueOutput) in Entity
 qouteall/imm_ptl/core/portal/Portal.java:97: cannot find symbol | symbol:   variable FabricEntityTypeBuilder | location: class Portal
 qouteall/imm_ptl/core/portal/Portal.java:232: method does not override or implement a method from a supertype
-qouteall/imm_ptl/core/portal/Portal.java:264: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/Portal.java:269: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/Portal.java:336: method getList in class CompoundTag cannot be applied to given types;
+qouteall/imm_ptl/core/portal/Portal.java:264: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/imm_ptl/core/portal/Portal.java:269: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/imm_ptl/core/portal/Portal.java:336: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
 qouteall/imm_ptl/core/portal/Portal.java:338: cannot find symbol | symbol:   method getAsString() | location: class StringTag
 qouteall/imm_ptl/core/portal/Portal.java:338: incompatible types: inference variable T has incompatible bounds
 qouteall/imm_ptl/core/portal/Portal.java:365: method does not override or implement a method from a supertype
@@ -208,7 +207,6 @@ qouteall/imm_ptl/core/portal/Portal.java:1057: no suitable method found for getN
 qouteall/imm_ptl/core/portal/Portal.java:1311: cannot find symbol | symbol:   method getServer() | location: class Portal
 qouteall/imm_ptl/core/portal/Portal.java:1656: cannot find symbol | symbol:   method getNormal() | location: variable oldGravityDir of type Direction
 qouteall/imm_ptl/core/portal/Portal.java:1660: no suitable method found for getNearest(double,double,double)
-qouteall/imm_ptl/core/portal/Portal.java:1868: constructor ChunkPos in record ChunkPos cannot be applied to given types;
 qouteall/q_misc_util/my_util/IntBox.java:57: cannot find symbol | symbol:   method getNormal() | location: class Direction
 qouteall/q_misc_util/my_util/IntBox.java:67: cannot find symbol | symbol:   method getNormal() | location: variable direction of type Direction
 qouteall/q_misc_util/my_util/IntBox.java:72: cannot find symbol | symbol:   method getNormal() | location: variable direction of type Direction
@@ -221,8 +219,8 @@ qouteall/imm_ptl/core/portal/PortalExtension.java:116: cannot find symbol | symb
 qouteall/imm_ptl/core/portal/PortalExtension.java:130: cannot find symbol | symbol:   method putUUID(String,UUID) | location: variable compoundTag of type CompoundTag
 qouteall/imm_ptl/core/portal/PortalExtension.java:133: cannot find symbol | symbol:   method putUUID(String,UUID) | location: variable compoundTag of type CompoundTag
 qouteall/imm_ptl/core/portal/PortalExtension.java:136: cannot find symbol | symbol:   method putUUID(String,UUID) | location: variable compoundTag of type CompoundTag
-qouteall/imm_ptl/core/portal/animation/PortalAnimation.java:78: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/animation/PortalAnimation.java:86: method getList in class CompoundTag cannot be applied to given types;
+qouteall/imm_ptl/core/portal/animation/PortalAnimation.java:78: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/imm_ptl/core/portal/animation/PortalAnimation.java:86: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
 qouteall/imm_ptl/core/portal/PortalState.java:104: no suitable method found for dimIdToKey(Optional<String>)
 qouteall/imm_ptl/core/portal/PortalState.java:105: no suitable method found for dimIdToKey(Optional<String>)
 qouteall/imm_ptl/core/portal/animation/UnilateralPortalState.java:152: no suitable method found for dimIdToKey(Optional<String>)
@@ -237,24 +235,10 @@ qouteall/imm_ptl/core/block_manipulation/BlockManipulationServer.java:267: canno
 qouteall/imm_ptl/core/CHelper.java:47: cannot find symbol | symbol:   method getId() | location: class GameProfile
 qouteall/imm_ptl/core/CHelper.java:94: cannot find symbol | symbol:   method getChat() | location: variable gui of type Gui
 qouteall/imm_ptl/core/CHelper.java:119: cannot find symbol | symbol:   method getMainCamera() | location: variable gameRenderer of type GameRenderer
-qouteall/imm_ptl/core/chunk_loading/ChunkVisibility.java:116: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ChunkVisibility.java:135: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ChunkVisibility.java:160: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ChunkVisibility.java:169: constructor ChunkPos in record ChunkPos cannot be applied to given types;
 qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:63: invalid method reference | symbol:   method toLong() | location: class ChunkPos
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:206: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:228: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:240: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:269: constructor ChunkPos in record ChunkPos cannot be applied to given types;
 qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:300: type Ticket does not take parameters
 qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:304: type Ticket does not take parameters
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:307: constructor ChunkPos in record ChunkPos cannot be applied to given types;
 qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:308: type Ticket does not take parameters
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:269: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:511: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:534: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:621: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:622: constructor ChunkPos in record ChunkPos cannot be applied to given types;
 qouteall/imm_ptl/core/chunk_loading/PlayerChunkLoading.java:225: cannot find symbol | symbol:   method partitionAndSendPackets(List<AttachmentChange>,ServerPlayer) | location: class AttachmentChange
 qouteall/imm_ptl/core/chunk_loading/ImmPtlClientChunkMap.java:139: method does not override or implement a method from a supertype
 qouteall/imm_ptl/core/chunk_loading/ImmPtlClientChunkMap.java:183: incompatible types: CompoundTag cannot be converted to Map<Types,long[]>
@@ -302,15 +286,12 @@ qouteall/imm_ptl/core/commands/PortalCommand.java:2478: no suitable method found
 qouteall/imm_ptl/core/commands/PortalCommand.java:2625: no suitable method found for create(Level)
 qouteall/imm_ptl/core/commands/PortalCommand.java:2636: no suitable method found for create(Level)
 qouteall/imm_ptl/core/commands/PortalCommand.java:2651: no suitable method found for create(Level)
-qouteall/q_misc_util/my_util/Mesh2D.java:1697: method getList in class CompoundTag cannot be applied to given types;
-qouteall/q_misc_util/my_util/Mesh2D.java:1698: method getList in class CompoundTag cannot be applied to given types;
+qouteall/q_misc_util/my_util/Mesh2D.java:1697: method getList in class CompoundTag cannot be applied to given types; | found:    String,byte
+qouteall/q_misc_util/my_util/Mesh2D.java:1698: method getList in class CompoundTag cannot be applied to given types; | found:    String,byte
 qouteall/q_misc_util/my_util/Mesh2D.java:1713: incompatible types: Optional<Integer> cannot be converted to int
 qouteall/q_misc_util/my_util/Mesh2D.java:1714: incompatible types: Optional<Integer> cannot be converted to int
 qouteall/q_misc_util/my_util/Mesh2D.java:1715: incompatible types: Optional<Integer> cannot be converted to int
 qouteall/q_misc_util/my_util/Mesh2D.java:1718: incompatible types: Optional<Double> cannot be converted to double
-qouteall/imm_ptl/core/commands/PortalDebugCommands.java:255: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/commands/PortalDebugCommands.java:271: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/commands/PortalDebugCommands.java:369: constructor ChunkPos in record ChunkPos cannot be applied to given types;
 qouteall/imm_ptl/core/commands/PortalDebugCommands.java:462: type TicketType does not take parameters
 qouteall/imm_ptl/core/commands/PortalDebugCommands.java:465: type Ticket does not take parameters
 qouteall/imm_ptl/core/commands/PortalDebugCommands.java:469: type Ticket does not take parameters
@@ -464,12 +445,11 @@ qouteall/imm_ptl/core/IPMcHelper.java:292: ClickEvent is abstract; cannot be ins
 qouteall/imm_ptl/core/IPMcHelper.java:315: cannot find symbol | symbol:   method getVendor() | location: class GlUtil
 qouteall/imm_ptl/core/portal/PortalPlaceholderBlock.java:55: cannot find symbol | symbol:   variable FabricBlockSettings | location: class PortalPlaceholderBlock
 qouteall/imm_ptl/core/portal/PortalPlaceholderBlock.java:93: method does not override or implement a method from a supertype
-qouteall/imm_ptl/core/portal/PortalPlaceholderBlock.java:127: method updateShape in class BlockBehaviour cannot be applied to given types;
+qouteall/imm_ptl/core/portal/PortalPlaceholderBlock.java:127: method updateShape in class BlockBehaviour cannot be applied to given types; | found:    BlockState,Direction,BlockState,LevelAccessor,BlockPos,BlockPos
 qouteall/imm_ptl/core/portal/PortalPlaceholderBlock.java:148: method does not override or implement a method from a supertype
 qouteall/imm_ptl/core/McHelper.java:321: cannot find symbol | symbol:   method lerpTo(double,double,double,float,float,int) | location: variable vehicle of type Entity
 qouteall/imm_ptl/core/McHelper.java:399: no suitable method found for create(Level)
 qouteall/imm_ptl/core/McHelper.java:403: incompatible types: CompoundTag cannot be converted to ValueOutput
-qouteall/imm_ptl/core/McHelper.java:413: constructor ChunkPos in record ChunkPos cannot be applied to given types;
 qouteall/imm_ptl/core/McHelper.java:425: ClickEvent is abstract; cannot be instantiated
 qouteall/imm_ptl/core/McHelper.java:436: cannot find symbol | symbol:   method createCommandSourceStack() | location: variable commandSender of type Entity
 qouteall/imm_ptl/core/McHelper.java:458: cannot find symbol | symbol:   method broadcastAndSend(Packet<CAP#1>) | location: variable entityTracker of type ChunkMap.TrackedEntity
@@ -490,16 +470,16 @@ qouteall/imm_ptl/core/miscellaneous/IPortalInitialScreen.java:35: cannot assign 
 qouteall/imm_ptl/core/miscellaneous/IPortalInitialScreen.java:36: cannot assign a value to final variable font
 qouteall/imm_ptl/core/miscellaneous/IPortalInitialScreen.java:62: cannot find symbol | symbol:   method alignCenter() | location: class StringWidget
 qouteall/imm_ptl/core/miscellaneous/IPortalInitialScreen.java:117: cannot find symbol | symbol:   method alignCenter() | location: variable pageNumberWidget of type StringWidget
-qouteall/imm_ptl/core/mixin/client/render/framebuffer/MixinMainTarget.java:23: constructor RenderTarget in class RenderTarget cannot be applied to given types;
+qouteall/imm_ptl/core/mixin/client/render/framebuffer/MixinMainTarget.java:23: constructor RenderTarget in class RenderTarget cannot be applied to given types; | found:    boolean
 qouteall/imm_ptl/core/mixin/client/render/framebuffer/MixinRenderTarget.java:156: cannot find symbol | symbol:   variable ON_OSX | location: class Minecraft
 qouteall/imm_ptl/core/mixin/client/render/MixinGameRenderer.java:296: cannot find symbol | symbol:   method getProjectionMatrix(double) | location: variable instance of type GameRenderer
 qouteall/imm_ptl/core/mixin/client/render/MixinLevelRenderer.java:198: cannot find symbol | symbol:   method setupLevel() | location: class Lighting
 qouteall/imm_ptl/core/mixin/client/render/MixinLevelRenderer.java:261: cannot find symbol | symbol:   method getPosition() | location: variable camera of type Camera
 qouteall/imm_ptl/core/mixin/client/render/MixinLevelRenderer.java:334: cannot find symbol | symbol:   method clear(int,boolean) | location: class RenderSystem
-qouteall/imm_ptl/core/mixin/client/render/MixinLevelRenderer.java:357: constructor ViewArea in class ViewArea cannot be applied to given types;
+qouteall/imm_ptl/core/mixin/client/render/MixinLevelRenderer.java:357: constructor ViewArea in class ViewArea cannot be applied to given types; | found:    SectionRenderDispatcher,Level,int,LevelRenderer
 qouteall/imm_ptl/core/mixin/client/render/MixinLevelRenderer.java:585: cannot find symbol | symbol:   variable compiled | location: variable renderChunk of type SectionRenderDispatcher.RenderSection
 qouteall/imm_ptl/core/mixin/client/render/MixinLevelRenderer.java:585: cannot find symbol | symbol:   variable CompiledSection | location: class SectionRenderDispatcher
-qouteall/imm_ptl/core/render/ImmPtlViewArea.java:104: constructor ViewArea in class ViewArea cannot be applied to given types;
+qouteall/imm_ptl/core/render/ImmPtlViewArea.java:104: constructor ViewArea in class ViewArea cannot be applied to given types; | found:    SectionRenderDispatcher,Level,int,LevelRenderer
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:107: cannot find symbol | symbol: variable sectionGridSizeX
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:107: cannot find symbol | symbol: variable sectionGridSizeY
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:107: cannot find symbol | symbol: variable sectionGridSizeZ
@@ -537,7 +517,7 @@ qouteall/imm_ptl/core/render/ImmPtlViewArea.java:245: cannot find symbol | symbo
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:253: cannot find symbol | symbol:   variable sectionGridSizeY | location: class ImmPtlViewArea
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:258: cannot find symbol | symbol:   variable level | location: class ImmPtlViewArea
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:260: cannot find symbol | symbol:   variable sectionGridSizeY | location: class ImmPtlViewArea
-qouteall/imm_ptl/core/render/ImmPtlViewArea.java:261: constructor RenderSection in class SectionRenderDispatcher.RenderSection cannot be applied to given types;
+qouteall/imm_ptl/core/render/ImmPtlViewArea.java:261: constructor RenderSection in class SectionRenderDispatcher.RenderSection cannot be applied to given types; | found:    int,int,int,int
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:344: cannot find symbol | symbol:   method releaseBuffers() | location: variable builtChunk of type SectionRenderDispatcher.RenderSection
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:356: sections has private access in ViewArea
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:356: incomparable types: SectionRenderDispatcher.RenderSection[] and RotatingSectionStorage<SectionRenderDispatcher.RenderSection>
@@ -580,14 +560,12 @@ qouteall/imm_ptl/core/mixin/client/sync/MixinClientPacketListener.java:127: cann
 qouteall/imm_ptl/core/mixin/client/sync/MixinClientPacketListener.java:127: cannot find symbol | symbol:   method getY() | location: variable packet of type ClientboundPlayerPositionPacket
 qouteall/imm_ptl/core/mixin/client/sync/MixinClientPacketListener.java:127: cannot find symbol | symbol:   method getZ() | location: variable packet of type ClientboundPlayerPositionPacket
 qouteall/imm_ptl/core/mixin/client/sync/MixinClientPacketListener.java:189: cannot find symbol | symbol:   method getGameTime() | location: variable packet of type ClientboundSetTimePacket
-qouteall/imm_ptl/core/mixin/client/sync/MixinMinecraft_RedirectedPacket.java:19: constructor ReentrantBlockableEventLoop in class ReentrantBlockableEventLoop<R> cannot be applied to given types;
+qouteall/imm_ptl/core/mixin/client/sync/MixinMinecraft_RedirectedPacket.java:19: constructor ReentrantBlockableEventLoop in class ReentrantBlockableEventLoop<R> cannot be applied to given types; | found:    String
 qouteall/imm_ptl/core/mixin/common/collision/MixinEntity.java:275: isClientSide has private access in Level
-qouteall/imm_ptl/core/mixin/common/collision/MixinEntity.java:336: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/mixin/common/entity_sync/MixinServerPlayer.java:27: constructor Player in class Player cannot be applied to given types;
+qouteall/imm_ptl/core/mixin/common/entity_sync/MixinServerPlayer.java:27: constructor Player in class Player cannot be applied to given types; | found:    Level,BlockPos,float,GameProfile
 qouteall/imm_ptl/core/mixin/common/entity_sync/MixinServerPlayer.java:39: no suitable method found for startRiding(Entity,boolean)
 qouteall/imm_ptl/core/mixin/common/interaction/MixinBucketItem.java:55: no suitable method found for getNearest(double,double,double)
 qouteall/imm_ptl/core/mixin/common/MixinLivingEntity.java:22: no suitable method found for setLastHurtByPlayer(<null>)
-qouteall/imm_ptl/core/mixin/common/other_sync/MixinPlayerList.java:113: constructor ChunkPos in record ChunkPos cannot be applied to given types;
 qouteall/imm_ptl/core/mixin/common/position_sync/MixinServerGamePacketListenerImpl.java:202: cannot find symbol | symbol:   variable RelativeMovement | location: class MixinServerGamePacketListenerImpl
 qouteall/imm_ptl/core/mixin/common/position_sync/MixinServerGamePacketListenerImpl.java:203: cannot find symbol | symbol:   variable RelativeMovement | location: class MixinServerGamePacketListenerImpl
 qouteall/imm_ptl/core/mixin/common/position_sync/MixinServerGamePacketListenerImpl.java:204: cannot find symbol | symbol:   variable RelativeMovement | location: class MixinServerGamePacketListenerImpl
@@ -604,10 +582,10 @@ qouteall/imm_ptl/core/network/ImmPtlNetworking.java:206: no suitable method foun
 qouteall/imm_ptl/core/network/ImmPtlNetworking.java:217: cannot find symbol | symbol:   method moveTo(double,double,double) | location: variable entity of type Entity
 qouteall/imm_ptl/core/platform_specific/IPConfigGUI.java:11: cannot find symbol | symbol:   method getConfigScreen(Class<IPConfig>,Screen) | location: class AutoConfig
 qouteall/imm_ptl/core/platform_specific/IPModEntryClient.java:54: incompatible types: bad return type in method reference
-qouteall/imm_ptl/core/platform_specific/IPModEntryClient.java:58: method register in class EntityRendererRegistry cannot be applied to given types;
+qouteall/imm_ptl/core/platform_specific/IPModEntryClient.java:58: method register in class EntityRendererRegistry cannot be applied to given types; | found:    EntityType<LoadingIndicatorEntity>,LoadingInd[...]::new
 qouteall/imm_ptl/core/platform_specific/O_O.java:98: cannot find symbol | symbol:   method getName() | location: interface WorldVersion
 qouteall/imm_ptl/core/portal/custom_portal_gen/PortalGenInfo.java:74: no suitable method found for create(ServerLevel)
-qouteall/imm_ptl/core/portal/nether_portal/BlockPortalShape.java:59: method getList in class CompoundTag cannot be applied to given types;
+qouteall/imm_ptl/core/portal/nether_portal/BlockPortalShape.java:59: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
 qouteall/imm_ptl/core/portal/nether_portal/BlockPortalShape.java:72: incompatible types: Optional<Integer> cannot be converted to int
 qouteall/imm_ptl/core/portal/nether_portal/BlockPortalShape.java:133: cannot find symbol | symbol:   method getNormal() | location: class Direction
 qouteall/imm_ptl/core/portal/nether_portal/BlockPortalShape.java:134: cannot find symbol | symbol:   method getNormal() | location: class Direction
@@ -643,11 +621,11 @@ qouteall/q_misc_util/my_util/IntMatrix3.java:36: cannot find symbol | symbol:   
 qouteall/q_misc_util/my_util/IntMatrix3.java:37: cannot find symbol | symbol:   method getNormal() | location: variable d3 of type Direction
 qouteall/q_misc_util/my_util/IntMatrix3.java:57: cannot find symbol | symbol:   method getNormal() | location: variable direction of type Direction
 qouteall/q_misc_util/my_util/IntMatrix3.java:58: cannot find symbol | symbol:   method fromDelta(int,int,int) | location: class Direction
-qouteall/imm_ptl/core/portal/nether_portal/FastBlockPortalShape.java:249: method getList in class CompoundTag cannot be applied to given types;
+qouteall/imm_ptl/core/portal/nether_portal/FastBlockPortalShape.java:249: method getList in class CompoundTag cannot be applied to given types; | found:    String,byte
 qouteall/imm_ptl/core/portal/nether_portal/FastBlockPortalShape.java:271: incompatible types: Optional<Integer> cannot be converted to int
 qouteall/imm_ptl/core/portal/nether_portal/FastBlockPortalShape.java:272: incompatible types: Optional<Integer> cannot be converted to int
 qouteall/imm_ptl/core/portal/nether_portal/FastBlockPortalShape.java:273: incompatible types: Optional<Integer> cannot be converted to int
-qouteall/imm_ptl/core/portal/custom_portal_gen/form/FlippingFloorSquareForm.java:166: method isSolidRender in class BlockStateBase cannot be applied to given types;
+qouteall/imm_ptl/core/portal/custom_portal_gen/form/FlippingFloorSquareForm.java:166: method isSolidRender in class BlockStateBase cannot be applied to given types; | found:    ServerLevel,BlockPos
 qouteall/imm_ptl/core/portal/custom_portal_gen/form/FlippingFloorSquareForm.java:172: cannot find symbol | symbol:   method getNormal() | location: variable DOWN of type Direction
 qouteall/imm_ptl/core/portal/custom_portal_gen/form/FlippingFloorSquareForm.java:182: cannot find symbol | symbol:   method getNormal() | location: variable DOWN of type Direction
 qouteall/imm_ptl/core/portal/custom_portal_gen/form/FlippingFloorSquareForm.java:189: no suitable method found for create(ServerLevel)
@@ -673,7 +651,7 @@ qouteall/imm_ptl/core/portal/global_portals/WorldWrappingPortal.java:62: no suit
 qouteall/imm_ptl/core/portal/global_portals/WorldWrappingPortal.java:90: cannot find symbol | symbol:   method getNormal() | location: class Direction
 qouteall/imm_ptl/core/portal/global_portals/WorldWrappingPortal.java:91: cannot find symbol | symbol:   method getNormal() | location: class Direction
 qouteall/imm_ptl/core/portal/global_portals/GlobalPortalStorage.java:98: cannot find symbol | symbol:   class Factory | location: class SavedData
-qouteall/imm_ptl/core/portal/global_portals/GlobalPortalStorage.java:232: method getList in class CompoundTag cannot be applied to given types;
+qouteall/imm_ptl/core/portal/global_portals/GlobalPortalStorage.java:232: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
 qouteall/imm_ptl/core/portal/global_portals/GlobalPortalStorage.java:251: incompatible types: Optional<Reference<EntityType<?>>> cannot be converted to EntityType<?>
 qouteall/imm_ptl/core/portal/global_portals/GlobalPortalStorage.java:253: no suitable method found for create(Level)
 qouteall/imm_ptl/core/portal/global_portals/GlobalPortalStorage.java:254: incompatible types: CompoundTag cannot be converted to ValueInput
@@ -685,7 +663,6 @@ qouteall/imm_ptl/core/portal/LoadingIndicatorEntity.java:115: method does not ov
 qouteall/imm_ptl/core/portal/LoadingIndicatorEntity.java:120: method does not override or implement a method from a supertype
 qouteall/imm_ptl/core/portal/LoadingIndicatorEntity.java:152: cannot find symbol | symbol:   method setOverlayMessage(Component,boolean) | location: variable inGameHud of type Gui
 qouteall/imm_ptl/core/portal/nether_portal/NetherPortalGeneration.java:132: no suitable method found for create(ServerLevel)
-qouteall/imm_ptl/core/portal/nether_portal/NetherPortalGeneration.java:174: constructor ChunkPos in record ChunkPos cannot be applied to given types;
 qouteall/imm_ptl/core/portal/PortalManipulation.java:91: no suitable method found for create(Level)
 qouteall/imm_ptl/core/portal/PortalManipulation.java:134: no suitable method found for create(Level)
 qouteall/imm_ptl/core/portal/PortalManipulation.java:161: no suitable method found for create(Level)
@@ -728,7 +705,7 @@ qouteall/imm_ptl/core/render/GuiPortalRendering.java:65: cannot find symbol | sy
 qouteall/imm_ptl/core/render/GuiPortalRendering.java:68: cannot find symbol | symbol:   method bindWrite(boolean) | location: variable framebuffer of type RenderTarget
 qouteall/imm_ptl/core/render/GuiPortalRendering.java:78: cannot find symbol | symbol:   method bindWrite(boolean) | location: variable mcFb of type RenderTarget
 qouteall/imm_ptl/core/render/GuiPortalRendering.java:102: cannot find symbol | symbol:   method getMainRenderTarget() | location: class Minecraft
-qouteall/imm_ptl/core/render/GuiPortalRendering.java:104: method resize in class RenderTarget cannot be applied to given types;
+qouteall/imm_ptl/core/render/GuiPortalRendering.java:104: method resize in class RenderTarget cannot be applied to given types; | found:    int,int,boolean
 qouteall/imm_ptl/core/render/LoadingIndicatorRenderer.java:15: method does not override or implement a method from a supertype
 qouteall/imm_ptl/core/render/LoadingIndicatorRenderer.java:20: method does not override or implement a method from a supertype
 qouteall/imm_ptl/core/render/MyGameRenderer.java:145: cannot find symbol | symbol:   class LightTexture | location: class MyGameRenderer
@@ -748,7 +725,7 @@ qouteall/imm_ptl/core/render/MyGameRenderer.java:247: cannot find symbol | symbo
 qouteall/imm_ptl/core/render/MyGameRenderer.java:262: cannot find symbol | symbol:   method getSectionRenderDispatcher() | location: variable worldRenderer of type LevelRenderer
 qouteall/imm_ptl/core/render/MyGameRenderer.java:270: cannot find symbol | symbol:   method resetProjectionMatrix(Matrix4f) | location: variable gameRenderer of type GameRenderer
 qouteall/imm_ptl/core/render/MyGameRenderer.java:272: cannot find symbol | symbol:   method applyModelViewMatrix() | location: class RenderSystem
-qouteall/imm_ptl/core/render/MyGameRenderer.java:277: method prepare in class EntityRenderDispatcher cannot be applied to given types;
+qouteall/imm_ptl/core/render/MyGameRenderer.java:277: method prepare in class EntityRenderDispatcher cannot be applied to given types; | found:    ClientLevel,Camera,Entity
 qouteall/imm_ptl/core/render/MyGameRenderer.java:293: cannot find symbol | symbol:   method getMainCamera() | location: variable gameRenderer of type GameRenderer
 qouteall/imm_ptl/core/render/MyGameRenderer.java:294: cannot find symbol | symbol:   method getRenderDistance() | location: variable gameRenderer of type GameRenderer
 qouteall/imm_ptl/core/render/MyGameRenderer.java:296: cannot find symbol | symbol:   method getPosition() | location: variable camera of type Camera
@@ -876,23 +853,23 @@ qouteall/imm_ptl/peripheral/alternate_dimension/AlternateDimensions.java:205: ca
 qouteall/imm_ptl/peripheral/alternate_dimension/AlternateDimensions.java:206: cannot find symbol | symbol:   method asLookup() | location: interface Registry<NoiseGeneratorSettings>
 qouteall/imm_ptl/peripheral/alternate_dimension/DelegatedChunkGenerator.java:57: method does not override or implement a method from a supertype
 qouteall/imm_ptl/peripheral/alternate_dimension/DelegatedChunkGenerator.java:117: method does not override or implement a method from a supertype
-qouteall/imm_ptl/peripheral/alternate_dimension/DelegatedChunkGenerator.java:119: method createStructures in class ChunkGenerator cannot be applied to given types;
+qouteall/imm_ptl/peripheral/alternate_dimension/DelegatedChunkGenerator.java:119: method createStructures in class ChunkGenerator cannot be applied to given types; | found:    RegistryAccess,ChunkGeneratorStructureState,StructureManager,ChunkAccess,StructureTemplateManager
 qouteall/imm_ptl/peripheral/alternate_dimension/DelegatedChunkGenerator.java:128: getTypeNameForDataFixer() in DelegatedChunkGenerator cannot override getTypeNameForDataFixer() in ChunkGenerator
 qouteall/imm_ptl/peripheral/alternate_dimension/DelegatedChunkGenerator.java:127: method does not override or implement a method from a supertype
 qouteall/imm_ptl/peripheral/alternate_dimension/DelegatedChunkGenerator.java:129: incompatible types: Optional<Identifier> cannot be converted to Optional<ResourceKey<MapCodec<? extends ChunkGenerator>>>
 qouteall/imm_ptl/peripheral/alternate_dimension/ErrorTerrainGenerator.java:36: ErrorTerrainGenerator is not abstract and does not override abstract method applyCarvers(WorldGenRegion,long,RandomState,BiomeManager,StructureManager,ChunkAccess) in ChunkGenerator
-qouteall/imm_ptl/peripheral/CommandStickItem.java:79: method getList in class CompoundTag cannot be applied to given types;
+qouteall/imm_ptl/peripheral/CommandStickItem.java:79: method getList in class CompoundTag cannot be applied to given types; | found:    String,byte
 qouteall/imm_ptl/peripheral/CommandStickItem.java:84: cannot find symbol | symbol:   method getAsString() | location: class StringTag
 qouteall/imm_ptl/peripheral/CommandStickItem.java:129: cannot find symbol | symbol:   method createCommandSourceStack() | location: variable player of type Player
 qouteall/imm_ptl/peripheral/CommandStickItem.java:158: method does not override or implement a method from a supertype
-qouteall/imm_ptl/peripheral/CommandStickItem.java:163: method appendHoverText in class Item cannot be applied to given types;
+qouteall/imm_ptl/peripheral/CommandStickItem.java:163: method appendHoverText in class Item cannot be applied to given types; | found:    ItemStack,TooltipContext,List<Component>,TooltipFlag
 qouteall/imm_ptl/peripheral/CommandStickItem.java:184: method does not override or implement a method from a supertype
 qouteall/imm_ptl/peripheral/dim_stack/DimEntryWidget.java:27: DimEntryWidget is not abstract and does not override abstract method extractContent(GuiGraphicsExtractor,int,int,boolean,float) in Entry
 qouteall/imm_ptl/peripheral/dim_stack/DimEntryWidget.java:82: method does not override or implement a method from a supertype
 qouteall/imm_ptl/peripheral/dim_stack/DimEntryWidget.java:188: method does not override or implement a method from a supertype
-qouteall/imm_ptl/peripheral/dim_stack/DimEntryWidget.java:191: method mouseClicked in class Entry<E> cannot be applied to given types;
+qouteall/imm_ptl/peripheral/dim_stack/DimEntryWidget.java:191: method mouseClicked in class Entry<E> cannot be applied to given types; | found:    double,double,int
 qouteall/imm_ptl/peripheral/dim_stack/DimListWidget.java:44: method does not override or implement a method from a supertype
-qouteall/imm_ptl/peripheral/dim_stack/DimListWidget.java:66: method mouseDragged in class AbstractContainerWidget cannot be applied to given types;
+qouteall/imm_ptl/peripheral/dim_stack/DimListWidget.java:66: method mouseDragged in class AbstractContainerWidget cannot be applied to given types; | found:    double,double,int,double,double
 qouteall/imm_ptl/peripheral/dim_stack/DimListWidget.java:80: method does not override or implement a method from a supertype
 qouteall/imm_ptl/peripheral/dim_stack/DimListWidget.java:85: method does not override or implement a method from a supertype
 qouteall/imm_ptl/peripheral/dim_stack/DimStackEntryEditScreen.java:293: method does not override or implement a method from a supertype
@@ -912,9 +889,9 @@ qouteall/imm_ptl/peripheral/PeripheralModMain.java:41: cannot find symbol | symb
 qouteall/imm_ptl/peripheral/platform_specific/PeripheralModEntryClient.java:10: package BlockRenderLayerMap does not exist
 qouteall/imm_ptl/peripheral/platform_specific/PeripheralModEntryClient.java:12: cannot find symbol | symbol:   method cutout() | location: class RenderType
 qouteall/imm_ptl/peripheral/PortalHelperItem.java:42: method does not override or implement a method from a supertype
-qouteall/imm_ptl/peripheral/PortalHelperItem.java:47: method appendHoverText in class Item cannot be applied to given types;
+qouteall/imm_ptl/peripheral/PortalHelperItem.java:47: method appendHoverText in class Item cannot be applied to given types; | found:    ItemStack,TooltipContext,List<Component>,TooltipFlag
 qouteall/imm_ptl/peripheral/portal_generation/IntrinsicNetherPortalForm.java:47: cannot find symbol | symbol:   method displayClientMessage(MutableComponent,boolean) | location: variable player of type ServerPlayer
-qouteall/imm_ptl/peripheral/portal_generation/IntrinsicPortalGeneration.java:134: method createPortalBlocks in class PortalShape cannot be applied to given types;
+qouteall/imm_ptl/peripheral/portal_generation/IntrinsicPortalGeneration.java:134: method createPortalBlocks in class PortalShape cannot be applied to given types; | found:    no arguments
 qouteall/imm_ptl/peripheral/portal_generation/PortalHelperForm.java:40: cannot find symbol | symbol:   method displayClientMessage(MutableComponent,boolean) | location: variable player of type ServerPlayer
 qouteall/imm_ptl/peripheral/wand/ClientPortalWandPortalCopy.java:302: cannot find symbol | symbol:   method lines() | location: class RenderType
 qouteall/imm_ptl/peripheral/wand/ClientPortalWandPortalCreation.java:233: cannot find symbol | symbol:   method lines() | location: class RenderType
@@ -923,7 +900,7 @@ qouteall/imm_ptl/peripheral/wand/ClientPortalWandPortalDrag.java:877: cannot fin
 qouteall/imm_ptl/peripheral/wand/ClientPortalWandPortalDrag.java:960: cannot find symbol | symbol:   method debugLineStrip(int) | location: class RenderType
 qouteall/imm_ptl/peripheral/wand/PortalWandItem.java:191: cannot find symbol | symbol:   class InteractionResultHolder | location: class PortalWandItem
 qouteall/imm_ptl/peripheral/wand/PortalWandItem.java:221: method does not override or implement a method from a supertype
-qouteall/imm_ptl/peripheral/wand/PortalWandItem.java:226: method appendHoverText in class Item cannot be applied to given types;
+qouteall/imm_ptl/peripheral/wand/PortalWandItem.java:226: method appendHoverText in class Item cannot be applied to given types; | found:    ItemStack,TooltipContext,List<Component>,TooltipFlag
 qouteall/q_misc_util/CustomTextOverlay.java:109: cannot find symbol | symbol:   method getFont() | location: variable gui of type Gui
 qouteall/q_misc_util/Helper.java:222: cannot find symbol | symbol:   method getNormal() | location: class Direction
 qouteall/q_misc_util/Helper.java:409: cannot find symbol | symbol:   method getNormal() | location: variable direction of type Direction
@@ -931,7 +908,7 @@ qouteall/q_misc_util/Helper.java:520: cannot find symbol | symbol:   method getA
 qouteall/q_misc_util/Helper.java:634: incompatible types: Optional<Double> cannot be converted to double
 qouteall/q_misc_util/Helper.java:658: incompatible types: Optional<Integer> cannot be converted to int
 qouteall/q_misc_util/Helper.java:677: incompatible types: Optional<Double> cannot be converted to double
-qouteall/q_misc_util/Helper.java:689: method getList in class CompoundTag cannot be applied to given types;
+qouteall/q_misc_util/Helper.java:689: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
 qouteall/q_misc_util/Helper.java:930: incompatible types: Optional<Long> cannot be converted to long
 qouteall/q_misc_util/Helper.java:1467: cannot find symbol | symbol:   method getElementType() | location: variable listTag of type ListTag
 qouteall/q_misc_util/ImplRemoteProcedureCall.java:76: cannot find symbol | symbol:   method writeResourceLocation(Identifier) | location: variable buf of type RegistryFriendlyByteBuf
@@ -939,7 +916,7 @@ qouteall/q_misc_util/ImplRemoteProcedureCall.java:77: cannot find symbol | symbo
 qouteall/q_misc_util/ImplRemoteProcedureCall.java:105: invalid method reference | symbol:   method readResourceLocation() | location: class FriendlyByteBuf
 qouteall/q_misc_util/ImplRemoteProcedureCall.java:410: cannot find symbol | symbol:   method getChat() | location: variable gui of type Gui
 qouteall/q_misc_util/mixin/client/MixinGui_Overlay.java:27: cannot find symbol | symbol:   variable hideGui | location: variable options of type Options
-qouteall/q_misc_util/mixin/MixinMinecraftServer_Misc.java:30: constructor ReentrantBlockableEventLoop in class ReentrantBlockableEventLoop<R> cannot be applied to given types;
+qouteall/q_misc_util/mixin/MixinMinecraftServer_Misc.java:30: constructor ReentrantBlockableEventLoop in class ReentrantBlockableEventLoop<R> cannot be applied to given types; | found:    String
 qouteall/q_misc_util/my_util/AARotation.java:67: cannot find symbol | symbol:   method getNormal() | location: variable transformedX of type Direction
 qouteall/q_misc_util/my_util/AARotation.java:68: cannot find symbol | symbol:   method getNormal() | location: variable transformedY of type Direction
 qouteall/q_misc_util/my_util/AARotation.java:69: cannot find symbol | symbol:   method getNormal() | location: variable transformedZ of type Direction
@@ -1299,62 +1276,39 @@ qouteall/imm_ptl/core/render/ImmPtlViewArea.java:424: cannot find symbol | symbo
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:439: cannot find symbol | symbol: variable sectionGridSizeY
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:440: cannot find symbol | symbol: variable sectionGridSizeX
 qouteall/imm_ptl/core/render/ImmPtlViewArea.java:441: cannot find symbol | symbol: variable sectionGridSizeZ
-qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:84: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:112: constructor TextureTarget in class TextureTarget cannot be applied to given types;
-qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:209: method keyPressed in class Screen cannot be applied to given types;
-qouteall/imm_ptl/core/portal/Portal.java:264: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/Portal.java:269: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/Portal.java:336: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/Portal.java:1868: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/portal/animation/PortalAnimation.java:78: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/animation/PortalAnimation.java:86: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ChunkVisibility.java:116: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ChunkVisibility.java:135: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ChunkVisibility.java:160: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ChunkVisibility.java:169: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:206: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:228: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:240: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:269: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTickets.java:307: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:269: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:511: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:534: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:621: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/chunk_loading/ImmPtlChunkTracking.java:622: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/q_misc_util/my_util/Mesh2D.java:1697: method getList in class CompoundTag cannot be applied to given types;
-qouteall/q_misc_util/my_util/Mesh2D.java:1698: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/commands/PortalDebugCommands.java:255: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/commands/PortalDebugCommands.java:271: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/commands/PortalDebugCommands.java:369: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/portal/PortalPlaceholderBlock.java:127: method updateShape in class BlockBehaviour cannot be applied to given types;
-qouteall/imm_ptl/core/McHelper.java:413: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/mixin/client/render/framebuffer/MixinMainTarget.java:23: constructor RenderTarget in class RenderTarget cannot be applied to given types;
-qouteall/imm_ptl/core/mixin/client/render/MixinLevelRenderer.java:357: constructor ViewArea in class ViewArea cannot be applied to given types;
-qouteall/imm_ptl/core/render/ImmPtlViewArea.java:104: constructor ViewArea in class ViewArea cannot be applied to given types;
-qouteall/imm_ptl/core/render/ImmPtlViewArea.java:261: constructor RenderSection in class SectionRenderDispatcher.RenderSection cannot be applied to given types;
-qouteall/imm_ptl/core/mixin/client/sync/MixinMinecraft_RedirectedPacket.java:19: constructor ReentrantBlockableEventLoop in class ReentrantBlockableEventLoop<R> cannot be applied to given types;
-qouteall/imm_ptl/core/mixin/common/collision/MixinEntity.java:336: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/mixin/common/entity_sync/MixinServerPlayer.java:27: constructor Player in class Player cannot be applied to given types;
-qouteall/imm_ptl/core/mixin/common/other_sync/MixinPlayerList.java:113: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/platform_specific/IPModEntryClient.java:58: method register in class EntityRendererRegistry cannot be applied to given types;
-qouteall/imm_ptl/core/portal/nether_portal/BlockPortalShape.java:59: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/nether_portal/FastBlockPortalShape.java:249: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/custom_portal_gen/form/FlippingFloorSquareForm.java:166: method isSolidRender in class BlockStateBase cannot be applied to given types;
-qouteall/imm_ptl/core/portal/global_portals/GlobalPortalStorage.java:232: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/core/portal/nether_portal/NetherPortalGeneration.java:174: constructor ChunkPos in record ChunkPos cannot be applied to given types;
-qouteall/imm_ptl/core/render/GuiPortalRendering.java:104: method resize in class RenderTarget cannot be applied to given types;
-qouteall/imm_ptl/core/render/MyGameRenderer.java:277: method prepare in class EntityRenderDispatcher cannot be applied to given types;
-qouteall/imm_ptl/peripheral/alternate_dimension/DelegatedChunkGenerator.java:119: method createStructures in class ChunkGenerator cannot be applied to given types;
-qouteall/imm_ptl/peripheral/CommandStickItem.java:79: method getList in class CompoundTag cannot be applied to given types;
-qouteall/imm_ptl/peripheral/CommandStickItem.java:163: method appendHoverText in class Item cannot be applied to given types;
-qouteall/imm_ptl/peripheral/dim_stack/DimEntryWidget.java:191: method mouseClicked in class Entry<E> cannot be applied to given types;
-qouteall/imm_ptl/peripheral/dim_stack/DimListWidget.java:66: method mouseDragged in class AbstractContainerWidget cannot be applied to given types;
-qouteall/imm_ptl/peripheral/PortalHelperItem.java:47: method appendHoverText in class Item cannot be applied to given types;
-qouteall/imm_ptl/peripheral/portal_generation/IntrinsicPortalGeneration.java:134: method createPortalBlocks in class PortalShape cannot be applied to given types;
-qouteall/imm_ptl/peripheral/wand/PortalWandItem.java:226: method appendHoverText in class Item cannot be applied to given types;
-qouteall/q_misc_util/Helper.java:689: method getList in class CompoundTag cannot be applied to given types;
-qouteall/q_misc_util/mixin/MixinMinecraftServer_Misc.java:30: constructor ReentrantBlockableEventLoop in class ReentrantBlockableEventLoop<R> cannot be applied to given types;
+qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:112: constructor TextureTarget in class TextureTarget cannot be applied to given types; | found:    int,int,boolean,boolean
+qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:209: method keyPressed in class Screen cannot be applied to given types; | found:    int,int,int
+qouteall/imm_ptl/core/portal/Portal.java:264: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/imm_ptl/core/portal/Portal.java:269: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/imm_ptl/core/portal/Portal.java:336: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/imm_ptl/core/portal/animation/PortalAnimation.java:78: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/imm_ptl/core/portal/animation/PortalAnimation.java:86: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/q_misc_util/my_util/Mesh2D.java:1697: method getList in class CompoundTag cannot be applied to given types; | found:    String,byte
+qouteall/q_misc_util/my_util/Mesh2D.java:1698: method getList in class CompoundTag cannot be applied to given types; | found:    String,byte
+qouteall/imm_ptl/core/portal/PortalPlaceholderBlock.java:127: method updateShape in class BlockBehaviour cannot be applied to given types; | found:    BlockState,Direction,BlockState,LevelAccessor,BlockPos,BlockPos
+qouteall/imm_ptl/core/mixin/client/render/framebuffer/MixinMainTarget.java:23: constructor RenderTarget in class RenderTarget cannot be applied to given types; | found:    boolean
+qouteall/imm_ptl/core/mixin/client/render/MixinLevelRenderer.java:357: constructor ViewArea in class ViewArea cannot be applied to given types; | found:    SectionRenderDispatcher,Level,int,LevelRenderer
+qouteall/imm_ptl/core/render/ImmPtlViewArea.java:104: constructor ViewArea in class ViewArea cannot be applied to given types; | found:    SectionRenderDispatcher,Level,int,LevelRenderer
+qouteall/imm_ptl/core/render/ImmPtlViewArea.java:261: constructor RenderSection in class SectionRenderDispatcher.RenderSection cannot be applied to given types; | found:    int,int,int,int
+qouteall/imm_ptl/core/mixin/client/sync/MixinMinecraft_RedirectedPacket.java:19: constructor ReentrantBlockableEventLoop in class ReentrantBlockableEventLoop<R> cannot be applied to given types; | found:    String
+qouteall/imm_ptl/core/mixin/common/entity_sync/MixinServerPlayer.java:27: constructor Player in class Player cannot be applied to given types; | found:    Level,BlockPos,float,GameProfile
+qouteall/imm_ptl/core/platform_specific/IPModEntryClient.java:58: method register in class EntityRendererRegistry cannot be applied to given types; | found:    EntityType<LoadingIndicatorEntity>,LoadingInd[...]::new
+qouteall/imm_ptl/core/portal/nether_portal/BlockPortalShape.java:59: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/imm_ptl/core/portal/nether_portal/FastBlockPortalShape.java:249: method getList in class CompoundTag cannot be applied to given types; | found:    String,byte
+qouteall/imm_ptl/core/portal/custom_portal_gen/form/FlippingFloorSquareForm.java:166: method isSolidRender in class BlockStateBase cannot be applied to given types; | found:    ServerLevel,BlockPos
+qouteall/imm_ptl/core/portal/global_portals/GlobalPortalStorage.java:232: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/imm_ptl/core/render/GuiPortalRendering.java:104: method resize in class RenderTarget cannot be applied to given types; | found:    int,int,boolean
+qouteall/imm_ptl/core/render/MyGameRenderer.java:277: method prepare in class EntityRenderDispatcher cannot be applied to given types; | found:    ClientLevel,Camera,Entity
+qouteall/imm_ptl/peripheral/alternate_dimension/DelegatedChunkGenerator.java:119: method createStructures in class ChunkGenerator cannot be applied to given types; | found:    RegistryAccess,ChunkGeneratorStructureState,StructureManager,ChunkAccess,StructureTemplateManager
+qouteall/imm_ptl/peripheral/CommandStickItem.java:79: method getList in class CompoundTag cannot be applied to given types; | found:    String,byte
+qouteall/imm_ptl/peripheral/CommandStickItem.java:163: method appendHoverText in class Item cannot be applied to given types; | found:    ItemStack,TooltipContext,List<Component>,TooltipFlag
+qouteall/imm_ptl/peripheral/dim_stack/DimEntryWidget.java:191: method mouseClicked in class Entry<E> cannot be applied to given types; | found:    double,double,int
+qouteall/imm_ptl/peripheral/dim_stack/DimListWidget.java:66: method mouseDragged in class AbstractContainerWidget cannot be applied to given types; | found:    double,double,int,double,double
+qouteall/imm_ptl/peripheral/PortalHelperItem.java:47: method appendHoverText in class Item cannot be applied to given types; | found:    ItemStack,TooltipContext,List<Component>,TooltipFlag
+qouteall/imm_ptl/peripheral/portal_generation/IntrinsicPortalGeneration.java:134: method createPortalBlocks in class PortalShape cannot be applied to given types; | found:    no arguments
+qouteall/imm_ptl/peripheral/wand/PortalWandItem.java:226: method appendHoverText in class Item cannot be applied to given types; | found:    ItemStack,TooltipContext,List<Component>,TooltipFlag
+qouteall/q_misc_util/Helper.java:689: method getList in class CompoundTag cannot be applied to given types; | found:    String,int
+qouteall/q_misc_util/mixin/MixinMinecraftServer_Misc.java:30: constructor ReentrantBlockableEventLoop in class ReentrantBlockableEventLoop<R> cannot be applied to given types; | found:    String
 qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:146: method does not override or implement a method from a supertype
 qouteall/imm_ptl/core/api/example/ExampleGuiPortalRendering.java:207: method does not override or implement a method from a supertype
 qouteall/imm_ptl/core/portal/Portal.java:232: method does not override or implement a method from a supertype

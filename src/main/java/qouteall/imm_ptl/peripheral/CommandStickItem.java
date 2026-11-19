@@ -81,7 +81,7 @@ public class CommandStickItem extends Item {
                         StringTag.valueOf("").getId()
                     )
                     .stream()
-                    .map(tag1 -> ((StringTag) tag1).getAsString())
+                    .map(tag1 -> ((StringTag) tag1).value())
                     .collect(Collectors.toList())
             );
         }

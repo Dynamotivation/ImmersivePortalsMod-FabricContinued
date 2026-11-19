@@ -47,3 +47,8 @@ logs/
 
 crowdin-translate-1.2.jar
 src/main/resources/immersive_portals.timestamp
+build-errors.log
+errors.compact.txt
+run/
+build/
+.gradle/

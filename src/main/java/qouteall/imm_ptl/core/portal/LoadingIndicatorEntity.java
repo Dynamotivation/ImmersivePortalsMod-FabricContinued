@@ -1,8 +1,10 @@
 package qouteall.imm_ptl.core.portal;
 
+import net.minecraft.world.level.storage.ValueInput;
+import qouteall.q_misc_util.my_util.ValueTagBridge;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.player.LocalPlayer;
@@ -24,12 +26,17 @@ import qouteall.q_misc_util.my_util.IntBox;
 
 public class LoadingIndicatorEntity extends Entity {
     public static final EntityType<LoadingIndicatorEntity> entityType =
-        FabricEntityTypeBuilder.create(
-            MobCategory.MISC,
-            (EntityType.EntityFactory<LoadingIndicatorEntity>) LoadingIndicatorEntity::new
-        ).dimensions(
-            EntityDimensions.fixed(1, 1)
-        ).fireImmune().trackable(96, 20).build();
+        EntityType.Builder.of(
+            (EntityType.EntityFactory<LoadingIndicatorEntity>) LoadingIndicatorEntity::new,
+            MobCategory.MISC
+        ).sized(1, 1)
+            .fireImmune()
+            .clientTrackingRange(6) // 96 blocks
+            .updateInterval(20)
+            .build(net.minecraft.resources.ResourceKey.create(
+                net.minecraft.core.registries.Registries.ENTITY_TYPE,
+                net.minecraft.resources.Identifier.fromNamespaceAndPath("immersive_portals", "loading_indicator")
+            ));
     
     private static final EntityDataAccessor<Component> TEXT = SynchedEntityData.defineId(
         LoadingIndicatorEntity.class, EntityDataSerializers.COMPONENT
@@ -113,12 +120,20 @@ public class LoadingIndicatorEntity extends Entity {
     }
     
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
+    protected void readAdditionalSaveData(ValueInput ip_input) {
+        CompoundTag tag = ValueTagBridge.toTag(ip_input);
     
     }
     
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
+    protected void addAdditionalSaveData(ValueOutput ip_output) {
+        CompoundTag ip_tag = new CompoundTag();
+        addAdditionalSaveDataTag(ip_tag);
+        ValueTagBridge.writeTag(ip_output, ip_tag);
+    }
+    
+    // CompoundTag based implementation kept from the 1.21 code, see ValueTagBridge
+    protected void addAdditionalSaveDataTag(CompoundTag tag) {
     
     }
     

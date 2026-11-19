@@ -1,5 +1,6 @@
 package qouteall.imm_ptl.peripheral.wand;
 
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.server.permissions.Permissions;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -817,7 +818,7 @@ public class PortalWandInteraction {
             return;
         }
         
-        Portal portal = Portal.ENTITY_TYPE.create(player.level());
+        Portal portal = Portal.ENTITY_TYPE.create(player.level(), EntitySpawnReason.LOAD);
         assert portal != null;
         
         portal.readPortalDataFromNbt(copyingSession.portalData);

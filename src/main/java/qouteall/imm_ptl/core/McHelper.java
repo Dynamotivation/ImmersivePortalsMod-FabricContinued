@@ -62,6 +62,7 @@ import qouteall.q_misc_util.Helper;
 import qouteall.q_misc_util.MiscHelper;
 import qouteall.q_misc_util.my_util.DQuaternion;
 import qouteall.q_misc_util.my_util.IntBox;
+import qouteall.q_misc_util.my_util.ValueTagBridge;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -401,7 +402,7 @@ public class McHelper {
         
         Validate.notNull(newPortal);
         
-        newPortal.load(portal.saveWithoutId(new CompoundTag()));
+        ValueTagBridge.loadEntityFromTag(newPortal, ValueTagBridge.entityToTag(portal));
         return newPortal;
     }
     

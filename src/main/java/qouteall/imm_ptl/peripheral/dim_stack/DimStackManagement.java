@@ -238,7 +238,7 @@ public class DimStackManagement {
             
             updateDimStack(server, dimStackInfo);
             
-            player.displayClientMessage(
+            player.sendSystemMessage(
                 Component.translatable("imm_ptl.dim_stack_established"),
                 false
             );
@@ -256,7 +256,7 @@ public class DimStackManagement {
             
             clearDimStackPortals(server);
             
-            player.displayClientMessage(
+            player.sendSystemMessage(
                 Component.translatable("imm_ptl.dim_stack_removed"),
                 false
             );

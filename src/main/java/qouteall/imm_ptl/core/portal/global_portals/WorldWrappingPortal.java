@@ -39,7 +39,7 @@ public class WorldWrappingPortal extends GlobalTrackedPortal {
     @Override
     protected void readAdditionalSaveData(ValueInput ip_input) {
         CompoundTag compoundTag = ValueTagBridge.toTag(ip_input);
-        super.readAdditionalSaveData(compoundTag);
+        super.readAdditionalSaveDataTag(compoundTag);
         
         if (compoundTag.contains("isInward")) {
             isInward = compoundTag.getBooleanOr("isInward", false);
@@ -58,7 +58,7 @@ public class WorldWrappingPortal extends GlobalTrackedPortal {
     
     // CompoundTag based implementation kept from the 1.21 code, see ValueTagBridge
     protected void addAdditionalSaveDataTag(CompoundTag compoundTag) {
-        super.addAdditionalSaveData(compoundTag);
+        super.addAdditionalSaveDataTag(compoundTag);
         
         compoundTag.putBoolean("isInward", isInward);
         compoundTag.putInt("zoneId", zoneId);

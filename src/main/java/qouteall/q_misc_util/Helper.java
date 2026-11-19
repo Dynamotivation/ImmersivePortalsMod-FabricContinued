@@ -41,6 +41,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -507,6 +508,11 @@ public class Helper {
     
     public static ResourceKey<Level> dimIdToKey(String str) {
         return dimIdToKey(McHelper.newResourceLocation(str));
+    }
+    
+    // 26.x CompoundTag getters return Optional
+    public static ResourceKey<Level> dimIdToKey(Optional<String> str) {
+        return str.map(Helper::dimIdToKey).orElse(Level.OVERWORLD);
     }
     
     public static void putWorldId(CompoundTag tag, String tagName, ResourceKey<Level> dim) {

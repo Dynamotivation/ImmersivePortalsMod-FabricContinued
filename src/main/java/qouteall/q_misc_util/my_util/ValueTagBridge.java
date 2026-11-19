@@ -5,9 +5,14 @@ import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.MapLike;
 import com.mojang.serialization.RecordBuilder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
@@ -67,5 +72,31 @@ public class ValueTagBridge {
     /** Write every entry of the tag into the ValueOutput. */
     public static void writeTag(ValueOutput output, CompoundTag tag) {
         output.store(ALL_KEYS, tag);
+    }
+    
+    /** Wrap a CompoundTag as a ValueInput, for calling 26.x load(...) methods. */
+    public static ValueInput inputOf(CompoundTag tag, HolderLookup.Provider lookup) {
+        return TagValueInput.create(ProblemReporter.DISCARDING, lookup, tag);
+    }
+    
+    /** Wrap an entity's full save data into the given tag. */
+    public static void saveEntityToTag(Entity entity, CompoundTag tag) {
+        TagValueOutput output = TagValueOutput.createWithContext(
+            ProblemReporter.DISCARDING, entity.level().registryAccess()
+        );
+        entity.saveWithoutId(output);
+        tag.merge(output.buildResult());
+    }
+    
+    /** Full entity save data (without id) as a CompoundTag. */
+    public static CompoundTag entityToTag(Entity entity) {
+        CompoundTag tag = new CompoundTag();
+        saveEntityToTag(entity, tag);
+        return tag;
+    }
+    
+    /** Load an entity from a CompoundTag produced by {@link #entityToTag}. */
+    public static void loadEntityFromTag(Entity entity, CompoundTag tag) {
+        entity.load(inputOf(tag, entity.level().registryAccess()));
     }
 }

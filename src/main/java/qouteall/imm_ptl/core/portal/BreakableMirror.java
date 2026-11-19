@@ -47,7 +47,7 @@ public class BreakableMirror extends Mirror {
     @Override
     protected void readAdditionalSaveData(ValueInput ip_input) {
         CompoundTag tag = ValueTagBridge.toTag(ip_input);
-        super.readAdditionalSaveData(tag);
+        super.readAdditionalSaveDataTag(tag);
         if (tag.contains("boxXL")) {
             wallArea = new IntBox(
                 new BlockPos(
@@ -85,7 +85,7 @@ public class BreakableMirror extends Mirror {
     
     // CompoundTag based implementation kept from the 1.21 code, see ValueTagBridge
     protected void addAdditionalSaveDataTag(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
+        super.addAdditionalSaveDataTag(tag);
         if (wallArea != null) {
             tag.putInt("boxXL", wallArea.l.getX());
             tag.putInt("boxYL", wallArea.l.getY());

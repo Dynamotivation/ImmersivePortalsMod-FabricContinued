@@ -246,7 +246,7 @@ public record FastBlockPortalShape(
         
         Direction.Axis axis = Direction.Axis.values()[axisInt];
         
-        ListTag positions = tag.getList("poses", Tag.TAG_INT);
+        ListTag positions = tag.getListOrEmpty("poses");
         
         int numNum = positions.size();
         
@@ -268,9 +268,9 @@ public record FastBlockPortalShape(
         
         int coordOnAxis = axis.choose(firstPointX, firstPointY, firstPointZ);
         for (int i = 1; i < positionNum; i++) {
-            int x = positions.getInt(i * 3);
-            int y = positions.getInt(i * 3 + 1);
-            int z = positions.getInt(i * 3 + 2);
+            int x = positions.getIntOr(i * 3, 0);
+            int y = positions.getIntOr(i * 3 + 1, 0);
+            int z = positions.getIntOr(i * 3 + 2, 0);
             
             if (axis.choose(x, y, z) != coordOnAxis) {
                 LOGGER.error("invalid block position in {} at {}", tag, i);

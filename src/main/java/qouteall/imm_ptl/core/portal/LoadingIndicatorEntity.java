@@ -6,7 +6,6 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -15,7 +14,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
@@ -120,6 +121,11 @@ public class LoadingIndicatorEntity extends Entity {
     }
     
     @Override
+    public boolean hurtServer(ServerLevel level, DamageSource source, float damage) {
+        return false;
+    }
+    
+    @Override
     protected void readAdditionalSaveData(ValueInput ip_input) {
         CompoundTag tag = ValueTagBridge.toTag(ip_input);
     
@@ -163,8 +169,7 @@ public class LoadingIndicatorEntity extends Entity {
     
     @Environment(EnvType.CLIENT)
     private void showMessageClient() {
-        Gui inGameHud = Minecraft.getInstance().gui;
-        inGameHud.setOverlayMessage(
+        Minecraft.getInstance().gui.hud.setOverlayMessage(
             getText(), false
         );
     }

@@ -19,6 +19,7 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -239,7 +240,11 @@ public class Portal extends Entity implements
     
     @Override
     protected void readAdditionalSaveData(ValueInput ip_input) {
-        CompoundTag compoundTag = ValueTagBridge.toTag(ip_input);
+        readAdditionalSaveDataTag(ValueTagBridge.toTag(ip_input));
+    }
+    
+    // CompoundTag based implementation kept from the 1.21 code, see ValueTagBridge
+    protected void readAdditionalSaveDataTag(CompoundTag compoundTag) {
         width = compoundTag.getDoubleOr("width", 0.0);
         height = compoundTag.getDoubleOr("height", 0.0);
         thickness = compoundTag.getDoubleOr("thickness", 0.0);
@@ -922,7 +927,7 @@ public class Portal extends Entity implements
         Validate.isTrue(!level().isClientSide());
         
         CompoundTag compoundTag = new CompoundTag();
-        addAdditionalSaveData(compoundTag);
+        addAdditionalSaveDataTag(compoundTag);
         
         // the listener generic parameter is contravariant. this is fine
         return (Packet<ClientGamePacketListener>) (Packet)
@@ -974,7 +979,7 @@ public class Portal extends Entity implements
     }
     
     @Override
-    protected @NotNull AABB makeBoundingBox() {
+    protected @NotNull AABB makeBoundingBox(Vec3 position) {
         if (axisW == null) {
             // it may be called when the portal is not yet initialized
             boundingBoxCache = null;
@@ -993,6 +998,12 @@ public class Portal extends Entity implements
     
     protected boolean shouldLimitBoundingBox() {
         return !getIsGlobal();
+    }
+    
+    // portals are not damageable
+    @Override
+    public boolean hurtServer(ServerLevel level, DamageSource source, float damage) {
+        return false;
     }
     
     @Override
@@ -1755,7 +1766,7 @@ public class Portal extends Entity implements
         PortalState oldState = getPortalState();
         
         setPos(pos);
-        readAdditionalSaveData(customData);
+        readAdditionalSaveDataTag(customData);
         
         if (animation.defaultAnimation.durationTicks > 0) {
             animation.defaultAnimation.startClientDefaultAnimation(this, oldState);
@@ -1766,13 +1777,13 @@ public class Portal extends Entity implements
     
     public CompoundTag writePortalDataToNbt() {
         CompoundTag nbtCompound = new CompoundTag();
-        addAdditionalSaveData(nbtCompound);
+        addAdditionalSaveDataTag(nbtCompound);
         return nbtCompound;
     }
     
     public void readPortalDataFromNbt(CompoundTag compound) {
         try {
-            readAdditionalSaveData(compound);
+            readAdditionalSaveDataTag(compound);
         }
         catch (Exception e) {
             LOGGER.error("Failed to read portal data from nbt {}", compound, e);

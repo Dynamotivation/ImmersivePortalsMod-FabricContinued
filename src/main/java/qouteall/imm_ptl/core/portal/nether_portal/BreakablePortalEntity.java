@@ -72,7 +72,7 @@ public abstract class BreakablePortalEntity extends Portal {
     @Override
     protected void readAdditionalSaveData(ValueInput ip_input) {
         CompoundTag compoundTag = ValueTagBridge.toTag(ip_input);
-        super.readAdditionalSaveData(compoundTag);
+        super.readAdditionalSaveDataTag(compoundTag);
         if (compoundTag.contains("netherPortalShape")) {
             blockPortalShape = new BlockPortalShape(compoundTag.getCompoundOrEmpty("netherPortalShape"));
         }
@@ -120,7 +120,7 @@ public abstract class BreakablePortalEntity extends Portal {
     
     // CompoundTag based implementation kept from the 1.21 code, see ValueTagBridge
     protected void addAdditionalSaveDataTag(CompoundTag compoundTag) {
-        super.addAdditionalSaveData(compoundTag);
+        super.addAdditionalSaveDataTag(compoundTag);
         if (blockPortalShape != null) {
             compoundTag.put("netherPortalShape", blockPortalShape.toTag());
         }

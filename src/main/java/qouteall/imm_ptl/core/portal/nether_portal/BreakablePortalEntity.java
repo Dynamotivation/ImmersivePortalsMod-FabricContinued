@@ -333,7 +333,8 @@ public abstract class BreakablePortalEntity extends Portal {
     }
     
     public boolean isOneWay() {
-        return reversePortalId.equals(Util.NIL_UUID);
+        // null: the entity is not fully initialized yet (e.g. on the client before the sync data was read)
+        return reversePortalId != null && reversePortalId.equals(Util.NIL_UUID);
     }
     
     public void markOneWay() {

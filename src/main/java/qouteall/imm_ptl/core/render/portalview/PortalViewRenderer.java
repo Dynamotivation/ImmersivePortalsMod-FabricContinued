@@ -217,7 +217,80 @@ public class PortalViewRenderer {
     // API portals show their view directly
     private static boolean usesLoadingPlaceholder(Portal portal) {
         return portal instanceof qouteall.imm_ptl.core.portal.nether_portal.NetherPortalEntity netherPortal
+            && netherPortal.reversePortalId != null
             && !netherPortal.isOneWay();
+    }
+
+    // end portals: the vanilla end portal star effect (copy of rendertype_end_portal with an opacity) as the placeholder
+    public static final RenderPipeline PORTAL_END_PLACEHOLDER_PIPELINE = RenderPipeline.builder(
+            net.minecraft.client.renderer.RenderPipelines.GLOBALS_SNIPPET
+        )
+        .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+        .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1)
+        .withLocation(Identifier.fromNamespaceAndPath("immersive_portals", "pipeline/portal_end_placeholder"))
+        .withVertexShader(Identifier.fromNamespaceAndPath("immersive_portals", "core/portal_end_placeholder"))
+        .withFragmentShader(Identifier.fromNamespaceAndPath("immersive_portals", "core/portal_end_placeholder"))
+        .withShaderDefine("PORTAL_LAYERS", 15)
+        .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+        .withCull(false)
+        .withVertexBinding(0, DefaultVertexFormat.POSITION)
+        .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+        .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+        .build();
+
+    private static boolean endPlaceholderBroken = false;
+
+    private static void drawEndPlaceholder(
+        PortalView view, RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos, float alpha
+    ) {
+        Portal portal = view.portal;
+        net.minecraft.client.renderer.texture.AbstractTexture sky = client.getTextureManager().getTexture(
+            net.minecraft.client.renderer.blockentity.AbstractEndPortalRenderer.END_SKY_LOCATION
+        );
+        net.minecraft.client.renderer.texture.AbstractTexture stars = client.getTextureManager().getTexture(
+            net.minecraft.client.renderer.blockentity.AbstractEndPortalRenderer.END_PORTAL_LOCATION
+        );
+
+        try (ByteBufferBuilder byteBuffer = new ByteBufferBuilder(4096)) {
+            BufferBuilder builder = new BufferBuilder(byteBuffer, PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION);
+            portal.renderViewAreaMesh(
+                portal.getOriginPos().subtract(cameraPos),
+                (p0x, p0y, p0z, p1x, p1y, p1z, p2x, p2y, p2z) -> {
+                    builder.addVertex((float) p0x, (float) p0y, (float) p0z);
+                    builder.addVertex((float) p1x, (float) p1y, (float) p1z);
+                    builder.addVertex((float) p2x, (float) p2y, (float) p2z);
+                }
+            );
+            MeshData meshData = builder.build();
+            if (meshData == null) {
+                return;
+            }
+            try (meshData) {
+                int vertexCount = meshData.drawState().vertexCount();
+                GpuBuffer vertexBuffer = RenderSystem.getDevice().createBuffer(
+                    () -> "Portal end placeholder mesh", com.mojang.blaze3d.buffers.GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
+                );
+                buffersToClose.add(vertexBuffer);
+                RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES);
+                GpuBuffer indexBuffer = indices.getBuffer(vertexCount);
+                GpuBufferSlice dynamicTransform = RenderSystem.getDynamicUniforms().writeTransform(
+                    viewRotation, new Vector4f(1, 1, 1, alpha), new Vector3f(), new Matrix4f()
+                );
+                try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                    () -> "Portal end placeholder", mainTarget.getColorTextureView(), Optional.empty(),
+                    mainTarget.getDepthTextureView(), OptionalDouble.empty()
+                )) {
+                    renderPass.setPipeline(PORTAL_END_PLACEHOLDER_PIPELINE);
+                    RenderSystem.bindDefaultUniforms(renderPass);
+                    renderPass.setUniform("DynamicTransforms", dynamicTransform);
+                    renderPass.bindTexture("Sampler0", sky.getTextureView(), sky.getSampler());
+                    renderPass.bindTexture("Sampler1", stars.getTextureView(), stars.getSampler());
+                    renderPass.setVertexBuffer(0, vertexBuffer.slice());
+                    renderPass.setIndexBuffer(indexBuffer, indices.type());
+                    renderPass.drawIndexed(vertexCount, 1, 0, 0, 0);
+                }
+            }
+        }
     }
 
     private static final Identifier OVERLAY_TEXTURE =
@@ -777,12 +850,28 @@ public class PortalViewRenderer {
         for (PortalView view : views) {
             drawView(view, mainTarget, viewRotation, cameraPos);
             drawOverlay(view, mainTarget, viewRotation, cameraPos);
-            if (!usesLoadingPlaceholder(view.portal)) {
+            boolean netherPlaceholder = usesLoadingPlaceholder(view.portal);
+            boolean endPlaceholder = view.portal instanceof qouteall.imm_ptl.core.portal.EndPortalEntity;
+            if (!netherPlaceholder && !endPlaceholder) {
                 continue;
             }
             float fade = updatePlaceholder(view, deltaSeconds);
             if (fade < 1) {
-                drawPlaceholder(view, mainTarget, viewRotation, cameraPos, 1 - fade);
+                if (endPlaceholder) {
+                    if (!endPlaceholderBroken) {
+                        try {
+                            drawEndPlaceholder(view, mainTarget, viewRotation, cameraPos, 1 - fade);
+                        }
+                        catch (Throwable e) {
+                            // a purely cosmetic effect must never crash the game
+                            endPlaceholderBroken = true;
+                            LOGGER.error("End portal placeholder failed, disabled", e);
+                        }
+                    }
+                }
+                else {
+                    drawPlaceholder(view, mainTarget, viewRotation, cameraPos, 1 - fade);
+                }
             }
         }
         placeholderStates.values().removeIf(state -> frameCounter - state.lastSeenFrame > 600);

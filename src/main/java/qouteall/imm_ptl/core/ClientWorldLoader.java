@@ -73,6 +73,9 @@ public class ClientWorldLoader {
     // 26.x: each ClientLevel is bound to a LevelExtractor (which feeds the LevelRenderer of the same dimension)
     public static final Map<ResourceKey<Level>, LevelExtractor> WORLD_EXTRACTOR_MAP =
         new Object2ObjectOpenHashMap<>();
+    // each dimension has its own particle engine
+    public static final Map<ResourceKey<Level>, net.minecraft.client.particle.ParticleEngine> PARTICLE_ENGINE_MAP =
+        new Object2ObjectOpenHashMap<>();
     public static final Map<ResourceKey<Level>, DimensionRenderHelper> RENDER_HELPER_MAP =
         new Object2ObjectOpenHashMap<>();
     
@@ -163,6 +166,18 @@ public class ClientWorldLoader {
     private static void tickRemoteWorldRandomTicksClient(
         ClientLevel newWorld, List<Portal> nearbyPortals
     ) {
+        // ambient particles (torches, lava, portals, ...) of the destination seen through the nearest portal
+        nearbyPortals.stream().filter(
+            portal -> portal.getDestDim() == newWorld.dimension()
+        ).findFirst().ifPresent(portal -> {
+            assert CLIENT.player != null;
+            Vec3 center = portal.transformPoint(CLIENT.player.position());
+
+            if (newWorld.getGameTime() % 2 == 0) {
+                // it costs some CPU time
+                newWorld.animateTick((int) center.x, (int) center.y, (int) center.z);
+            }
+        });
     }
     
     public static void cleanUp() {
@@ -337,6 +352,7 @@ public class ClientWorldLoader {
             CLIENT_WORLD_MAP.put(playerDimension, CLIENT.level);
             WORLD_RENDERER_MAP.put(playerDimension, CLIENT.levelRenderer);
             WORLD_EXTRACTOR_MAP.put(playerDimension, CLIENT.levelExtractor);
+            PARTICLE_ENGINE_MAP.put(playerDimension, CLIENT.particleEngine);
             RENDER_HELPER_MAP.put(
                 CLIENT.level.dimension(),
                 new DimensionRenderHelper(CLIENT.level)
@@ -441,6 +457,13 @@ public class ClientWorldLoader {
             // and looks it up from there in LevelExtractor, so that field must point to the right renderer
             WORLD_RENDERER_MAP.put(dimension, worldRenderer);
             WORLD_EXTRACTOR_MAP.put(dimension, worldExtractor);
+            PARTICLE_ENGINE_MAP.put(
+                dimension,
+                new net.minecraft.client.particle.ParticleEngine(
+                    newWorld,
+                    ((qouteall.imm_ptl.core.mixin.client.particle.IEParticleEngineAccess) CLIENT.particleEngine).ip_getResources()
+                )
+            );
             LevelExtractor finalWorldExtractor = worldExtractor;
             ClientLevel finalNewWorld = newWorld;
             withSwitchedLevelRenderer(worldRenderer, () -> {
@@ -516,7 +539,6 @@ public class ClientWorldLoader {
         Validate.notNull(newWorldRenderer, "new world renderer is null");
         
         CLIENT.level = newWorld;
-        ((IEParticleManager) CLIENT.particleEngine).ip_setWorld(newWorld);
         ((IEMinecraftClient) CLIENT).ip_setWorldRenderer(newWorldRenderer);
         ((IEClientPlayNetworkHandler) networkHandler).ip_setWorld(newWorld);
         isWorldSwitched = true;
@@ -534,7 +556,6 @@ public class ClientWorldLoader {
             
             CLIENT.level = originalWorld;
             ((IEMinecraftClient) CLIENT).ip_setWorldRenderer(originalWorldRenderer);
-            ((IEParticleManager) CLIENT.particleEngine).ip_setWorld(originalWorld);
             ((IEClientPlayNetworkHandler) networkHandler).ip_setWorld(originalNetHandlerWorld);
             isWorldSwitched = originalIsWorldSwitched;
         }
@@ -586,6 +607,15 @@ public class ClientWorldLoader {
         return null;
     }
     
+    public static @Nullable net.minecraft.client.particle.ParticleEngine getParticleEngineOfRenderer(LevelRenderer renderer) {
+        for (Map.Entry<ResourceKey<Level>, LevelRenderer> entry : WORLD_RENDERER_MAP.entrySet()) {
+            if (entry.getValue() == renderer) {
+                return PARTICLE_ENGINE_MAP.get(entry.getKey());
+            }
+        }
+        return null;
+    }
+
     public static boolean getIsWorldSwitched() {
         return isWorldSwitched;
     }

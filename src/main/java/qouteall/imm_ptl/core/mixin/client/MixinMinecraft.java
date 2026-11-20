@@ -40,6 +40,12 @@ public abstract class MixinMinecraft implements IEMinecraftClient {
     @Shadow
     @Final
     public net.minecraft.client.renderer.extract.LevelExtractor levelExtractor;
+
+    // 26.x: each dimension has its own particle engine, it is switched together with the renderer
+    @Mutable
+    @Shadow
+    @Final
+    public net.minecraft.client.particle.ParticleEngine particleEngine;
     
     @Shadow
     private static int fps;
@@ -166,6 +172,10 @@ public abstract class MixinMinecraft implements IEMinecraftClient {
             ClientWorldLoader.getExtractorOfRenderer(r);
         if (extractor != null) {
             levelExtractor = extractor;
+        }
+        net.minecraft.client.particle.ParticleEngine engine = ClientWorldLoader.getParticleEngineOfRenderer(r);
+        if (engine != null) {
+            particleEngine = engine;
         }
     }
     

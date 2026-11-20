@@ -98,6 +98,7 @@
     "client.render.MixinGameRenderer_Portal",
     "client.render.MixinLevelRenderer_Portal",
     "client.particle.MixinParticleGroup",
+    "client.particle.IEParticleEngineAccess",
     "client.sound.MixinClientLevel_Sound",
     "client.sync.IEBlockStatePredictionHandler",
     "client.sync.MixinBlockStatePredictionHandler",

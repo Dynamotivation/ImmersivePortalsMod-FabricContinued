@@ -46,6 +46,26 @@ public abstract class MixinLevelRenderer_Portal implements qouteall.imm_ptl.core
         cloudRenderer = renderer;
     }
     
+    // switch from the normal projection (used by the sky) to the oblique clipping projection of the portal view
+    @Inject(
+        method = "render",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/LevelRenderer;addMainPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lnet/minecraft/client/renderer/state/level/LevelRenderState;Lnet/minecraft/util/profiling/ProfilerFiller;Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;)V"
+        )
+    )
+    private void ip_addObliqueProjectionPass(CallbackInfo ci, @Local FrameGraphBuilder frame) {
+        com.mojang.blaze3d.buffers.GpuBufferSlice slice = PortalViewRenderer.getPendingObliqueSlice();
+        if (!PortalViewRenderer.isRenderingViews() || slice == null) {
+            return;
+        }
+        FramePass pass = frame.addPass("imm_ptl_oblique_projection");
+        targets.main = pass.readsAndWrites(targets.main);
+        pass.executes(() -> com.mojang.blaze3d.systems.RenderSystem.setProjectionMatrix(
+            slice, com.mojang.blaze3d.ProjectionType.PERSPECTIVE
+        ));
+    }
+
     // draw the pre-rendered portal views right after the main pass (terrain, entities, translucent stuff)
     @Inject(
         method = "render",

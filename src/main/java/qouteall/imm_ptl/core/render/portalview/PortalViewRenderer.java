@@ -186,6 +186,16 @@ public class PortalViewRenderer {
     private static RenderTarget activeTarget = null;
     private static boolean isRenderingViews = false;
 
+    // The oblique projection clips everything on the camera side of the portal plane, which would also cut the sky
+    // dome above/around the camera. So the sky is drawn with the normal projection, then an extra frame pass
+    // (MixinLevelRenderer_Portal) switches to the oblique one for terrain, entities, clouds, ...
+    private static GpuBufferSlice pendingObliqueSlice = null;
+    private static Matrix4f pendingNormalProjection = null;
+
+    public static GpuBufferSlice getPendingObliqueSlice() {
+        return pendingObliqueSlice;
+    }
+
     /**
      * When not null, {@code GameRenderer.mainRenderTarget()} returns this instead of the real main target.
      */
@@ -390,6 +400,7 @@ public class PortalViewRenderer {
         float d = -nEye.dot(pEye);
         boolean zZeroToOne = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne();
         Matrix4f obliqueProjection = ObliqueProjection.apply(projection, nEye.x, nEye.y, nEye.z, d, zZeroToOne);
+        pendingNormalProjection = new Matrix4f(projection);
 
         // culling frustum (non-reversed projection)
         Matrix4f cullProjection = new Matrix4f().perspective(
@@ -509,9 +520,12 @@ public class PortalViewRenderer {
         // render
         activeTarget = target;
 
-        GpuBufferSlice projectionBuffer = ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer)
-            .ip_getPortalProjectionBuffer(new Matrix4f(cameraState.projectionMatrix));
-        RenderSystem.setProjectionMatrix(projectionBuffer, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
+        // slot 0: normal projection (sky), slot 1: oblique projection (set by an extra frame pass after the sky)
+        qouteall.imm_ptl.core.ducks.IEGameRendererPortal portalAccess =
+            (qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer;
+        GpuBufferSlice normalSlice = portalAccess.ip_getPortalProjectionBuffer(new Matrix4f(pendingNormalProjection), 0);
+        pendingObliqueSlice = portalAccess.ip_getPortalProjectionBuffer(new Matrix4f(cameraState.projectionMatrix), 1);
+        RenderSystem.setProjectionMatrix(normalSlice, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
         // vanilla terrain.vsh positions sections relative to Globals.CameraBlockPos/CameraOffset, which still hold the
         // previous frame's MAIN camera here (written in GameRenderer.render). Not needed with Sodium, harmless with it.
         ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_updateGlobalSettingsForView(deltaTracker, cameraPos);
@@ -544,6 +558,7 @@ public class PortalViewRenderer {
             );
         }
         finally {
+            pendingObliqueSlice = null;
             rendererAccess.ip_setCloudRenderer(originalClouds);
             if (sodiumProjection != null) {
                 sodiumProjection.set(savedSodiumProjection);

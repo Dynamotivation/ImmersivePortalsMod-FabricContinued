@@ -53,7 +53,7 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
     private net.minecraft.client.renderer.GlobalSettingsUniform globalSettingsUniform;
     
     @Unique
-    private ProjectionMatrixBuffer ip_portalProjectionBuffer;
+    private final ProjectionMatrixBuffer[] ip_portalProjectionBuffers = new ProjectionMatrixBuffer[2];
     
     // the destinations of portals are rendered before the main level is extracted,
     // as every extraction overwrites the shared level render state
@@ -84,13 +84,13 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
     }
     
     @Override
-    public GpuBufferSlice ip_getPortalProjectionBuffer(Matrix4f projectionMatrix) {
-        if (ip_portalProjectionBuffer == null) {
-            ip_portalProjectionBuffer = new ProjectionMatrixBuffer("immersive portals view");
+    public GpuBufferSlice ip_getPortalProjectionBuffer(Matrix4f projectionMatrix, int slot) {
+        if (ip_portalProjectionBuffers[slot] == null) {
+            ip_portalProjectionBuffers[slot] = new ProjectionMatrixBuffer("immersive portals view " + slot);
         }
-        return ip_portalProjectionBuffer.getBuffer(projectionMatrix);
+        return ip_portalProjectionBuffers[slot].getBuffer(projectionMatrix);
     }
-    
+
     @Override
     public void ip_renderLightmap(Lightmap destLightmap, net.minecraft.client.renderer.state.LightmapRenderState state) {
         IELightmapRenderStateExtractor access = (IELightmapRenderStateExtractor) lightmapRenderStateExtractor;

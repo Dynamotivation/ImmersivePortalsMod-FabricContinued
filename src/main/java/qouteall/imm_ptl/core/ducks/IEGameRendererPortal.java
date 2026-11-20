@@ -10,7 +10,7 @@ public interface IEGameRendererPortal {
     
     GraphicsResourceAllocator ip_getResourcePool();
     
-    GpuBufferSlice ip_getPortalProjectionBuffer(Matrix4f projectionMatrix);
+    GpuBufferSlice ip_getPortalProjectionBuffer(Matrix4f projectionMatrix, int slot);
     
     /**
      * Extracts the lightmap state for the currently active level/camera into {@code state} and renders it

@@ -5,6 +5,7 @@ import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.framegraph.FramePass;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.ResourceHandle;
+import net.minecraft.client.renderer.CloudRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LevelTargetBundle;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
@@ -12,6 +13,7 @@ import net.minecraft.client.renderer.state.level.LevelRenderState;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -19,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import qouteall.imm_ptl.core.render.portalview.PortalViewRenderer;
 
 @Mixin(LevelRenderer.class)
-public abstract class MixinLevelRenderer_Portal {
+public abstract class MixinLevelRenderer_Portal implements qouteall.imm_ptl.core.ducks.IELevelRendererPortal {
     @Shadow
     @Final
     private LevelTargetBundle targets;
@@ -27,6 +29,22 @@ public abstract class MixinLevelRenderer_Portal {
     @Shadow
     @Final
     private LevelRenderState levelRenderState;
+    
+    // each portal view uses its own cloud renderer (its buffers can only be used once per frame)
+    @Shadow
+    @Final
+    @Mutable
+    private CloudRenderer cloudRenderer;
+    
+    @Override
+    public CloudRenderer ip_getCloudRenderer() {
+        return cloudRenderer;
+    }
+    
+    @Override
+    public void ip_setCloudRenderer(CloudRenderer renderer) {
+        cloudRenderer = renderer;
+    }
     
     // draw the pre-rendered portal views right after the main pass (terrain, entities, translucent stuff)
     @Inject(

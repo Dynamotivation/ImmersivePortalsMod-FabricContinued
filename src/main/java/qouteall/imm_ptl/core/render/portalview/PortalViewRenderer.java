@@ -91,6 +91,25 @@ public class PortalViewRenderer {
         lightmapStates = new java.util.HashMap<>();
     private static final java.util.Map<net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level>, Long> lightmapFrame = new java.util.HashMap<>();
     private static long frameCounter = 0;
+    
+    // cloud renderers for portal views: CloudRenderer's buffer ring cannot be used twice in one frame
+    private static final java.util.List<net.minecraft.client.renderer.CloudRenderer> cloudRendererPool = new java.util.ArrayList<>();
+    private static int cloudRenderersUsed = 0;
+    private static java.util.Optional<net.minecraft.client.renderer.CloudRenderer.TextureData> cloudTextureData = null;
+    
+    private static net.minecraft.client.renderer.CloudRenderer acquireCloudRenderer() {
+        if (cloudRenderersUsed >= cloudRendererPool.size()) {
+            net.minecraft.client.renderer.CloudRenderer renderer = new net.minecraft.client.renderer.CloudRenderer();
+            qouteall.imm_ptl.core.mixin.client.render.IECloudRenderer access =
+                (qouteall.imm_ptl.core.mixin.client.render.IECloudRenderer) renderer;
+            if (cloudTextureData == null) {
+                cloudTextureData = access.ip_prepare(client.getResourceManager(), Profiler.get());
+            }
+            access.ip_apply(cloudTextureData, client.getResourceManager(), Profiler.get());
+            cloudRendererPool.add(renderer);
+        }
+        return cloudRendererPool.get(cloudRenderersUsed++);
+    }
     private static com.mojang.blaze3d.textures.GpuTextureView activeLightmap = null;
     
     public static com.mojang.blaze3d.textures.GpuTextureView getActiveLightmapOverride() {
@@ -144,6 +163,9 @@ public class PortalViewRenderer {
 
     public static void cleanUp() {
         endFrame();
+        cloudRendererPool.forEach(net.minecraft.client.renderer.CloudRenderer::close);
+        cloudRendererPool.clear();
+        cloudTextureData = null;
         lightmaps.values().forEach(net.minecraft.client.renderer.Lightmap::close);
         lightmaps.clear();
         lightmapStates.clear();
@@ -188,6 +210,7 @@ public class PortalViewRenderer {
     public static void onBeforeExtract(GameRenderer gameRenderer, DeltaTracker deltaTracker) {
         endFrame();
         frameCounter++;
+        cloudRenderersUsed = 0;
 
         if (isRenderingViews || client.level == null || client.player == null) {
             return;
@@ -226,6 +249,15 @@ public class PortalViewRenderer {
                 catch (Throwable e) {
                     LOGGER.error("Failed to render portal view {}", portal, e);
                     activeTarget = null;
+                    activeLightmap = null;
+                    // the failed LevelRenderer.render left vanilla's shared feature frame open, which would crash the
+                    // next render ("PreparedFrame already in use"): release it
+                    try {
+                        ((qouteall.imm_ptl.core.mixin.client.render.IEFeatureRenderDispatcher)
+                            gameRenderer.featureRenderDispatcher()).ip_getPreparedFrame().close();
+                    }
+                    catch (Throwable ignored) {
+                    }
                 }
             }
             Profiler.get().pop();
@@ -436,11 +468,20 @@ public class PortalViewRenderer {
         fogRenderer.updateBuffer(cameraState.fogData);
         GpuBufferSlice terrainFog = fogRenderer.getBuffer(FogRenderer.FogMode.WORLD);
 
-        destRenderer.render(
-            ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_getResourcePool(),
-            deltaTracker, false, cameraState, cameraState.viewRotationMatrix,
-            terrainFog, cameraState.fogData.color, true
-        );
+        qouteall.imm_ptl.core.ducks.IELevelRendererPortal rendererAccess =
+            (qouteall.imm_ptl.core.ducks.IELevelRendererPortal) destRenderer;
+        net.minecraft.client.renderer.CloudRenderer originalClouds = rendererAccess.ip_getCloudRenderer();
+        rendererAccess.ip_setCloudRenderer(acquireCloudRenderer());
+        try {
+            destRenderer.render(
+                ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_getResourcePool(),
+                deltaTracker, false, cameraState, cameraState.viewRotationMatrix,
+                terrainFog, cameraState.fogData.color, true
+            );
+        }
+        finally {
+            rendererAccess.ip_setCloudRenderer(originalClouds);
+        }
     }
 
     /**

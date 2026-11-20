@@ -93,6 +93,7 @@
     "client.particle.MixinParticleEngine",
     "client.render.IELightmapRenderStateExtractor",
     "client.render.IECloudRenderer",
+    "client.render.IEFeatureRenderDispatcher",
     "client.render.MixinCamera_Portal",
     "client.render.MixinGameRenderer_Portal",
     "client.render.MixinLevelRenderer_Portal",

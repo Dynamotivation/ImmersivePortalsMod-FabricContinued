@@ -129,7 +129,7 @@ public class NormalSkylandGenerator extends NoiseBasedChunkGenerator {
             intrinsicSkylandNGS.noiseSettings(),
             intrinsicSkylandNGS.defaultBlock(),
             intrinsicSkylandNGS.defaultFluid(),
-            // TODO(26.2): vanilla removed noNewCaves; the original end-like skyland router is not restored yet
+            // 26.2: vanilla removed noNewCaves; the vanilla floating_islands router is already end-like, so it is used as is
             intrinsicSkylandNGS.noiseRouter(),
             intrinsicSkylandNGS.surfaceRule(),
             intrinsicSkylandNGS.spawnTarget(),

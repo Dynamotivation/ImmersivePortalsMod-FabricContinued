@@ -372,6 +372,9 @@ public class PortalViewRenderer {
         // fill the camera state
         CameraRenderState cameraState = gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
         camera.extractRenderState(cameraState, cameraEntityPartialTicks);
+        // cave/occlusion culling assumes the camera is in open space. The virtual camera of a portal can be
+        // inside terrain relative to the destination, which culls the terrain wrongly (sky visible through ground)
+        cameraState.smartCull = PortalRendering.shouldEnableSodiumCaveCulling();
         cameraState.pos = cameraPos;
         cameraState.viewRotationMatrix.set(viewMatrix);
         cameraState.projectionMatrix.set(projectionMatrix);

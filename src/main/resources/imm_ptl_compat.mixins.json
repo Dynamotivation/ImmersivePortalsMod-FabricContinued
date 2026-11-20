@@ -4,7 +4,7 @@
   "compatibilityLevel": "JAVA_25",
   "plugin": "qouteall.imm_ptl.core.compat.IPCompatMixinPlugin",
   "mixins": [
-    "cardinal_comp.MixinCardinalCompComponentKey",
+    "cardinal_comp.MixinCardinalCompComponentKey"
   ],
   "injectors": {
     "defaultRequire": 1

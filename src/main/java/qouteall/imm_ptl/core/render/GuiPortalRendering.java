@@ -1,7 +1,7 @@
 package qouteall.imm_ptl.core.render;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -39,51 +39,6 @@ public class GuiPortalRendering {
         WorldRenderInfo worldRenderInfo,
         RenderTarget framebuffer
     ) {
-        RenderStates.basicProjectionMatrix = null;
-        
-        CHelper.checkGlError();
-        
-        ((IECamera) RenderStates.originalCamera).ip_resetState(
-            worldRenderInfo.cameraPos, worldRenderInfo.world
-        );
-        
-        Validate.isTrue(renderingFrameBuffer == null);
-        renderingFrameBuffer = framebuffer;
-        
-        MyRenderHelper.restoreViewPort();
-        
-        RenderTarget mcFb = MyGameRenderer.client.getMainRenderTarget();
-        
-        Validate.isTrue(mcFb != framebuffer);
-        
-        ((IEMinecraftClient) MyGameRenderer.client).ip_setFrameBuffer(framebuffer);
-        
-        if (!worldRenderInfo.doRenderSky) {
-            // pre-clear the framebuffer with 0 alpha, if it doesn't render the sky
-            GlStateManager._colorMask(true, true, true, true);
-            framebuffer.setClearColor(0, 0, 0, 0);
-            framebuffer.clear(true);
-        }
-        
-        framebuffer.bindWrite(true);
-        
-        IPCGlobal.renderer.prepareRendering();
-        
-        IPCGlobal.renderer.invokeWorldRendering(worldRenderInfo);
-        
-        IPCGlobal.renderer.finishRendering();
-        
-        ((IEMinecraftClient) MyGameRenderer.client).ip_setFrameBuffer(mcFb);
-        
-        mcFb.bindWrite(true);
-        
-        renderingFrameBuffer = null;
-        
-        MyRenderHelper.restoreViewPort();
-        
-        CHelper.checkGlError();
-        
-        RenderStates.basicProjectionMatrix = null;
     }
     
     private static final HashMap<RenderTarget, WorldRenderInfo> renderingTasks = new HashMap<>();
@@ -92,20 +47,6 @@ public class GuiPortalRendering {
         WorldRenderInfo worldRenderInfo,
         RenderTarget renderTarget
     ) {
-        if (!ClientWorldLoader.getIsInitialized()) {
-            LOGGER.error("Trying to submit world rendering task before client world is initialized", new Throwable());
-            return;
-        }
-        
-        Validate.isTrue(!renderingTasks.containsKey(renderTarget));
-        
-        RenderTarget mcFB = Minecraft.getInstance().getMainRenderTarget();
-        if (renderTarget.width != mcFB.width || renderTarget.height != mcFB.height) {
-            renderTarget.resize(mcFB.width, mcFB.height, true);
-            LOGGER.info("Resized Framebuffer for GUI Portal Rendering");
-        }
-        
-        renderingTasks.put(renderTarget, worldRenderInfo);
     }
     
     // Not API

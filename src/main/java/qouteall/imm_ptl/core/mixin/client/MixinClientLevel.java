@@ -5,7 +5,8 @@ import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
-import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.extract.LevelExtractor;
+import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.TickRateManager;
@@ -33,7 +34,6 @@ import qouteall.q_misc_util.my_util.LimitedLogger;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 @Mixin(ClientLevel.class)
 public abstract class MixinClientLevel implements IEClientWorld {
@@ -59,20 +59,15 @@ public abstract class MixinClientLevel implements IEClientWorld {
     @Final
     private Minecraft minecraft;
     
-    @Mutable
-    @Shadow
-    @Final
-    private LevelRenderer levelRenderer;
-    
     @Shadow
     @Final
     private EntityTickList tickingEntities;
     
     @Shadow
-    protected abstract Map<String, MapItemSavedData> getAllMapData();
+    protected abstract Map<MapId, MapItemSavedData> getAllMapData();
     
     @Shadow
-    protected abstract void addMapData(Map<String, MapItemSavedData> map);
+    protected abstract void addMapData(Map<MapId, MapItemSavedData> map);
     
     @Shadow
     @Final
@@ -100,8 +95,8 @@ public abstract class MixinClientLevel implements IEClientWorld {
     )
     void onConstructed(
         ClientPacketListener clientPacketListener, ClientLevel.ClientLevelData clientLevelData,
-        ResourceKey resourceKey, Holder holder, int loadDistance, int j, Supplier supplier,
-        LevelRenderer levelRenderer, boolean bl, long l, CallbackInfo ci
+        ResourceKey resourceKey, Holder holder, int loadDistance, int simulationDistance,
+        LevelExtractor levelExtractor, boolean isDebug, long biomeZoomSeed, int seaLevel, CallbackInfo ci
     ) {
         ClientLevel clientWorld = (ClientLevel) (Object) this;
         ClientChunkCache myClientChunkManager =
@@ -147,7 +142,7 @@ public abstract class MixinClientLevel implements IEClientWorld {
     @Inject(method = "Lnet/minecraft/client/multiplayer/ClientLevel;toString()Ljava/lang/String;", at = @At("HEAD"), cancellable = true)
     private void onToString(CallbackInfoReturnable<String> cir) {
         ClientLevel this_ = (ClientLevel) (Object) this;
-        cir.setReturnValue("ClientWorld " + this_.dimension().location());
+        cir.setReturnValue("ClientWorld " + this_.dimension().identifier());
     }
     
     @Inject(
@@ -161,7 +156,7 @@ public abstract class MixinClientLevel implements IEClientWorld {
     
     @Override
     public void ip_resetWorldRendererRef() {
-        levelRenderer = null;
+        // 26.x: ClientLevel no longer references a LevelRenderer (only a LevelExtractor), nothing to reset
     }
     
     @Override
@@ -170,12 +165,12 @@ public abstract class MixinClientLevel implements IEClientWorld {
     }
     
     @Override
-    public Map<String, MapItemSavedData> ip_getAllMapData() {
+    public Map<MapId, MapItemSavedData> ip_getAllMapData() {
         return getAllMapData();
     }
     
     @Override
-    public void ip_addMapData(Map<String, MapItemSavedData> map) {
+    public void ip_addMapData(Map<MapId, MapItemSavedData> map) {
         addMapData(map);
     }
     
@@ -187,5 +182,18 @@ public abstract class MixinClientLevel implements IEClientWorld {
     @Override
     public void ip_setTickRateManager(TickRateManager cond) {
         tickRateManager = cond;
+    }
+
+    // vanilla culls particles by distance to the main camera, which is in another dimension's coordinates
+    @com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation(
+        method = "doAddParticle",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;position()Lnet/minecraft/world/phys/Vec3;")
+    )
+    private net.minecraft.world.phys.Vec3 ip_particleCameraPos(
+        net.minecraft.client.Camera camera,
+        com.llamalad7.mixinextras.injector.wrapoperation.Operation<net.minecraft.world.phys.Vec3> original
+    ) {
+        net.minecraft.world.phys.Vec3 center = ClientWorldLoader.remoteParticleCenter;
+        return center != null ? center : original.call(camera);
     }
 }

@@ -5,7 +5,6 @@ import com.mojang.blaze3d.pipeline.TextureTarget;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -81,7 +80,7 @@ public class ExampleGuiPortalRendering {
         
         ChunkLoader chunkLoader = new ChunkLoader(
             new DimensionalChunkPos(
-                world.dimension(), new ChunkPos(BlockPos.containing(pos))
+                world.dimension(), ChunkPos.containing(BlockPos.containing(pos))
             ),
             8
         );
@@ -106,13 +105,6 @@ public class ExampleGuiPortalRendering {
             ResourceKey<Level> dimension,
             Vec3 position
         ) {
-            if (frameBuffer == null) {
-                // the framebuffer size doesn't matter here
-                // because it will be automatically resized when rendering
-                frameBuffer = new TextureTarget(2, 2, true, true);
-            }
-            
-            Minecraft.getInstance().setScreen(new GuiPortalScreen(dimension, position));
         }
         
         public static void serverRemoveChunkLoader(ServerPlayer player) {
@@ -143,79 +135,12 @@ public class ExampleGuiPortalRendering {
             );
         }
         
-        @Override
-        public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-            super.render(guiGraphics, mouseX, mouseY, delta);
-            
-            double t1 = CHelper.getSmoothCycles(503);
-            double t2 = CHelper.getSmoothCycles(197);
-            
-            // Determine the camera transformation
-            Matrix4f cameraTransformation = new Matrix4f();
-            cameraTransformation.identity();
-            cameraTransformation.mul(
-                DQuaternion.rotationByDegrees(
-                    new Vec3(1, 1, 1).normalize(),
-                    t1 * 360
-                ).toMatrix()
-            );
-            
-            // Determine the camera position
-            Vec3 cameraPosition = this.viewingPosition.add(
-                new Vec3(Math.cos(t2 * 2 * Math.PI), 0, Math.sin(t2 * 2 * Math.PI)).scale(30)
-            );
-            
-            // Create the world render info
-            WorldRenderInfo worldRenderInfo = new WorldRenderInfo.Builder()
-                .setWorld(ClientWorldLoader.getWorld(viewingDimension))
-                .setCameraPos(cameraPosition)
-                .setCameraTransformation(cameraTransformation)
-                .setOverwriteCameraTransformation(true) // do not apply camera transformation to existing player camera transformation
-                .setDescription(null)
-                .setRenderDistance(minecraft.options.getEffectiveRenderDistance())
-                .setDoRenderHand(false)
-                .setEnableViewBobbing(false)
-                .setDoRenderSky(false)
-                .setHasFog(false)
-                .build();
-            
-            // Ask it to render the world into the framebuffer the next frame
-            GuiPortalRendering.submitNextFrameRendering(worldRenderInfo, frameBuffer);
-            
-            // Draw the framebuffer
-            int h = minecraft.getWindow().getHeight();
-            int w = minecraft.getWindow().getWidth();
-            MyRenderHelper.drawFramebufferWithBounds(
-                frameBuffer,
-                true, // enable alpha blend
-                false, // don't modify alpha
-                (int) (w * 0.2f), (int) (w * 0.8f),
-                (int) (h * 0.2f), (int) (h * 0.8f)
-            );
-            
-            guiGraphics.drawCenteredString(
-                this.font, this.title, this.width / 2, 70, 16777215
-            );
-        }
         
         @Override
         public boolean isPauseScreen() {
             return false;
         }
         
-        // close when E is pressed
-        @Override
-        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-            if (super.keyPressed(keyCode, scanCode, modifiers)) {
-                return true;
-            }
-            
-            if (minecraft.options.keyInventory.matches(keyCode, scanCode)) {
-                this.onClose();
-                return true;
-            }
-            
-            return false;
-        }
+
     }
 }

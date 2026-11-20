@@ -117,6 +117,8 @@ public class IPModMainClient {
         VisibleSectionDiscovery.init();
         
         ImmPtlViewArea.init();
+        DebugAutoScreenshot.init();
+        IPCGlobal.CLIENT_CLEANUP_EVENT.register(qouteall.imm_ptl.core.render.portalview.PortalViewRenderer::cleanUp);
         
         IPFlywheelCompat.init();
     

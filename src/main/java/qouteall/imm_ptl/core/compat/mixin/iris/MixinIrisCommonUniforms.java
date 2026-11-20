@@ -1,0 +1,28 @@
+/*
+ * Adapted from the Immersive Portals port for Minecraft 26.3 (other-ports/ImmersivePortalsMod,
+ * compat/iris_portal_view/mixin/MixinIrisCommonUniforms.java), Copyright 2020 qouteall and contributors,
+ * licensed under the Apache License, Version 2.0. Changes: require = 0, runtime proof flag.
+ */
+package qouteall.imm_ptl.core.compat.mixin.iris;
+
+import net.irisshaders.iris.gl.state.FogMode;
+import net.irisshaders.iris.gl.uniform.DynamicUniformHolder;
+import net.irisshaders.iris.uniforms.CommonUniforms;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import qouteall.imm_ptl.core.compat.iris_portal_view.IrisPortalClipping;
+
+/**
+ * Registers the portal view clip coefficients with every program that gets Iris' dynamic uniforms
+ * (programs that do not declare the uniform ignore it). Optional, see MixinIrisPipelineManager.
+ */
+@Mixin(value = CommonUniforms.class, remap = false)
+public class MixinIrisCommonUniforms {
+    @Inject(method = "addDynamicUniforms", at = @At("RETURN"), require = 0)
+    private static void ip_addPortalClipping(DynamicUniformHolder uniforms, FogMode fogMode, CallbackInfo ci) {
+        uniforms.uniform4f(IrisPortalClipping.UNIFORM, IrisPortalClipping::getCoefficients, IrisPortalClipping.NOTIFIER);
+        IrisPortalClipping.onUniformRegistered();
+    }
+}

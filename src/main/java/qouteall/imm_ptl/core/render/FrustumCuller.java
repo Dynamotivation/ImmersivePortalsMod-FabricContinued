@@ -124,18 +124,7 @@ public class FrustumCuller {
     
     @Nullable
     private static Portal getCurrentNearestVisibleCullablePortal() {
-        if (TransformationManager.isIsometricView) {
-            return null;
-        }
-        
-        Vec3 cameraPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        return CHelper.getClientNearbyPortals(16).filter(
-            portal -> portal.isInFrontOfPortal(cameraPos)
-        ).filter(
-            Portal::canDoOuterFrustumCulling
-        ).min(
-            Comparator.comparingDouble(portal -> portal.getDistanceToNearestPointInPortal(cameraPos))
-        ).orElse(null);
+        return null;
     }
     
     // 2  1

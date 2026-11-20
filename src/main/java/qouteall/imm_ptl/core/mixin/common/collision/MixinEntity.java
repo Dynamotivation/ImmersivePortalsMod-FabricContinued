@@ -151,31 +151,21 @@ public abstract class MixinEntity implements IEEntity, ImmPtlEntityExtension {
         }
     }
     
+    // 26.x: inside-block effects are computed per movement step, with the box made by makeBoundingBox(pos)
     @Redirect(
-        method = "Lnet/minecraft/world/entity/Entity;checkInsideBlocks()V",
+        method = "checkInsideBlocks(Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/entity/InsideBlockEffectApplier$StepBasedCollector;Lit/unimi/dsi/fastutil/longs/LongSet;I)I",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/world/entity/Entity;getBoundingBox()Lnet/minecraft/world/phys/AABB;"
+            target = "Lnet/minecraft/world/entity/Entity;makeBoundingBox(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/AABB;"
         )
     )
-    private AABB redirectBoundingBoxInCheckingBlockCollision(Entity entity) {
-        return ip_getActiveCollisionBox(entity.getBoundingBox());
-    }
-    
-    @Inject(
-        method = "checkInsideBlocks",
-        at = @At(
-            value = "INVOKE_ASSIGN",
-            target = "Lnet/minecraft/world/entity/Entity;getBoundingBox()Lnet/minecraft/world/phys/AABB;",
-            shift = At.Shift.AFTER
-        ),
-        locals = LocalCapture.CAPTURE_FAILHARD,
-        cancellable = true
-    )
-    private void onCheckInsideBlocks(CallbackInfo ci, AABB box) {
+    private AABB redirectBoundingBoxInCheckingBlockCollision(Entity entity, net.minecraft.world.phys.Vec3 pos) {
+        AABB box = ip_getActiveCollisionBox(entity.getDimensions(entity.getPose()).makeBoundingBox(pos));
         if (box == null) {
-            ci.cancel();
+            // fully on the other side of the portal: use a degenerate box so that no block is touched
+            return new AABB(pos.x, pos.y, pos.z, pos.x, pos.y, pos.z);
         }
+        return box;
     }
     
     // avoid suffocation when colliding with a portal on wall
@@ -272,7 +262,7 @@ public abstract class MixinEntity implements IEEntity, ImmPtlEntityExtension {
             ip_portalCollisionHandler.update(this_);
         }
         
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             IPMcHelper.onClientEntityTick(this_);
         }
     }
@@ -330,10 +320,10 @@ public abstract class MixinEntity implements IEEntity, ImmPtlEntityExtension {
             ) {
                 this.blockPosition = new BlockPos(bx, by, bz);
                 this.inBlockState = null;
-                if (SectionPos.blockToSectionCoord(bx) != this.chunkPosition.x
-                    || SectionPos.blockToSectionCoord(bz) != this.chunkPosition.z
+                if (SectionPos.blockToSectionCoord(bx) != this.chunkPosition.x()
+                    || SectionPos.blockToSectionCoord(bz) != this.chunkPosition.z()
                 ) {
-                    this.chunkPosition = new ChunkPos(this.blockPosition);
+                    this.chunkPosition = ChunkPos.containing(this.blockPosition);
                 }
             }
         }

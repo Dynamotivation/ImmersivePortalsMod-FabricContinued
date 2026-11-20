@@ -1,11 +1,15 @@
 package qouteall.imm_ptl.core.portal.global_portals;
 
+import net.minecraft.world.level.storage.ValueInput;
+import qouteall.q_misc_util.my_util.ValueTagBridge;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.Tuple;
+import qouteall.q_misc_util.Tuple;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -23,7 +27,7 @@ import java.util.stream.Collectors;
 
 public class WorldWrappingPortal extends GlobalTrackedPortal {
     public static final EntityType<WorldWrappingPortal> ENTITY_TYPE =
-        createPortalEntityType(WorldWrappingPortal::new);
+        createPortalEntityType("border_portal", WorldWrappingPortal::new);
     
     public boolean isInward = true;
     public int zoneId = -1;
@@ -33,20 +37,28 @@ public class WorldWrappingPortal extends GlobalTrackedPortal {
     }
     
     @Override
-    protected void readAdditionalSaveData(CompoundTag compoundTag) {
-        super.readAdditionalSaveData(compoundTag);
+    protected void readAdditionalSaveData(ValueInput ip_input) {
+        CompoundTag compoundTag = ValueTagBridge.toTag(ip_input);
+        super.readAdditionalSaveDataTag(compoundTag);
         
         if (compoundTag.contains("isInward")) {
-            isInward = compoundTag.getBoolean("isInward");
+            isInward = compoundTag.getBooleanOr("isInward", false);
         }
         if (compoundTag.contains("zoneId")) {
-            zoneId = compoundTag.getInt("zoneId");
+            zoneId = compoundTag.getIntOr("zoneId", 0);
         }
     }
     
     @Override
-    protected void addAdditionalSaveData(CompoundTag compoundTag) {
-        super.addAdditionalSaveData(compoundTag);
+    protected void addAdditionalSaveData(ValueOutput ip_output) {
+        CompoundTag ip_tag = new CompoundTag();
+        addAdditionalSaveDataTag(ip_tag);
+        ValueTagBridge.writeTag(ip_output, ip_tag);
+    }
+    
+    // CompoundTag based implementation kept from the 1.21 code, see ValueTagBridge
+    protected void addAdditionalSaveDataTag(CompoundTag compoundTag) {
+        super.addAdditionalSaveDataTag(compoundTag);
         
         compoundTag.putBoolean("isInward", isInward);
         compoundTag.putInt("zoneId", zoneId);
@@ -59,7 +71,7 @@ public class WorldWrappingPortal extends GlobalTrackedPortal {
         int zoneId,
         boolean isInward
     ) {
-        WorldWrappingPortal portal = WorldWrappingPortal.ENTITY_TYPE.create(serverWorld);
+        WorldWrappingPortal portal = WorldWrappingPortal.ENTITY_TYPE.create(serverWorld, EntitySpawnReason.LOAD);
         portal.isInward = isInward;
         portal.zoneId = zoneId;
         
@@ -87,8 +99,8 @@ public class WorldWrappingPortal extends GlobalTrackedPortal {
         portal.setPos(center.x, center.y, center.z);
         portal.setDestination(destination);
         
-        portal.setAxisW(Vec3.atLowerCornerOf(axises.getA().getNormal()));
-        portal.setAxisH(Vec3.atLowerCornerOf(axises.getB().getNormal()));
+        portal.setAxisW(Vec3.atLowerCornerOf(axises.getA().getUnitVec3i()));
+        portal.setAxisH(Vec3.atLowerCornerOf(axises.getB().getUnitVec3i()));
         portal.setWidth(Helper.getCoordinate(areaSize, axises.getA().getAxis()));
         portal.setHeight(Helper.getCoordinate(areaSize, axises.getB().getAxis()));
         

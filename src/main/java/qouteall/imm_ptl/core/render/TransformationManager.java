@@ -7,7 +7,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.Direction;
-import net.minecraft.util.Tuple;
+import qouteall.q_misc_util.Tuple;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -228,14 +228,6 @@ public class TransformationManager {
     }
     
     private static void updateCamera(Minecraft client) {
-        Camera camera = client.gameRenderer.getMainCamera();
-        camera.setup(
-            client.level,
-            client.player,
-            !client.options.getCameraType().isFirstPerson(),
-            client.options.getCameraType().isMirrored(),
-            RenderStates.getPartialTick()
-        );
     }
     
     public static Matrix4f getMirrorTransformation(Vec3 normal) {
@@ -302,21 +294,10 @@ public class TransformationManager {
     
     // isometric is equivalent to the camera being in infinitely far place
     public static Vec3 getIsometricAdjustedCameraPos() {
-        Camera camera = client.gameRenderer.getMainCamera();
-        return getIsometricAdjustedCameraPos(camera);
+        return null;
     }
     
     public static Vec3 getIsometricAdjustedCameraPos(Camera camera) {
-        Vec3 cameraPos = camera.getPosition();
-        
-        if (!isIsometricView) {
-            return cameraPos;
-        }
-        
-        Quaternionf rotation = camera.rotation();
-        Vector3f vec = new Vector3f(0, 0, client.options.getEffectiveRenderDistance() * -10);
-        rotation.transform(vec);
-        
-        return cameraPos.add(vec.x(), vec.y(), vec.z());
+        return null;
     }
 }

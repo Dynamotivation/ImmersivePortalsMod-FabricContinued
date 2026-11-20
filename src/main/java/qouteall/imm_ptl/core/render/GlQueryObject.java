@@ -17,13 +17,6 @@ public class GlQueryObject {
     }
     
     public void performQueryAnySamplePassed(Runnable renderingFunc) {
-        // mac does not support any samples passed query
-        if (Minecraft.ON_OSX) {
-            performQuerySampleNumPassed(renderingFunc);
-            return;
-        }
-        
-        performQuery(renderingFunc, GL33.GL_ANY_SAMPLES_PASSED);
     }
     
     public void performQuerySampleNumPassed(Runnable renderingFunc) {

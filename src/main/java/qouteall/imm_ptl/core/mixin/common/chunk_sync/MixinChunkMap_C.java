@@ -74,7 +74,7 @@ public abstract class MixinChunkMap_C implements IEChunkMap {
      * @reason
      */
     @Overwrite
-    private void onChunkReadyToSend(LevelChunk chunk) {
+    private void onChunkReadyToSend(net.minecraft.server.level.ChunkHolder chunkHolder, LevelChunk chunk) {
         ImmPtlChunkTracking.onChunkProvidedDeferred(chunk);
     }
 }

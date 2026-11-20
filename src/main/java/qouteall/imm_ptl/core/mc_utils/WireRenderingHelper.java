@@ -36,43 +36,6 @@ public class WireRenderingHelper {
         int color, double scale,
         PoseStack matrixStack
     ) {
-        Random random = new Random(color);
-        
-        double boxSize = Math.pow(boxCenter.distanceTo(cameraPos), 0.3) * 0.09;
-        
-        matrixStack.pushPose();
-        matrixStack.translate(
-            boxCenter.x - cameraPos.x,
-            boxCenter.y - cameraPos.y,
-            boxCenter.z - cameraPos.z
-        );
-        
-        matrixStack.scale((float) scale, (float) scale, (float) scale);
-        
-        DQuaternion rotation = getRandomSmoothRotation(random);
-        
-        double periodLen = 100;
-        
-        matrixStack.mulPose(rotation.toMcQuaternion());
-        Matrix4f matrix = matrixStack.last().pose();
-        
-        float alpha = ((color >> 24) & 0xff) / 255f;
-        float red = ((color >> 16) & 0xff) / 255f;
-        float green = ((color >> 8) & 0xff) / 255f;
-        float blue = (color & 0xff) / 255f;
-        
-        LevelRenderer.renderLineBox(
-            matrixStack,
-            vertexConsumer,
-            -boxSize / 2,
-            -boxSize / 2,
-            -boxSize / 2,
-            boxSize / 2,
-            boxSize / 2,
-            boxSize / 2,
-            red, green, blue, alpha
-        );
-        matrixStack.popPose();
     }
     
     public static DQuaternion getRandomSmoothRotation(Random random) {

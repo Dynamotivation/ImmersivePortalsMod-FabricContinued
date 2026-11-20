@@ -5,19 +5,18 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongPredicate;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ChunkResult;
-import net.minecraft.server.level.ChunkTaskPriorityQueue;
-import net.minecraft.server.level.ChunkTaskPriorityQueueSorter;
 import net.minecraft.server.level.DistanceManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.Ticket;
 import net.minecraft.server.level.TicketType;
-import net.minecraft.util.SortedArraySet;
-import net.minecraft.util.thread.ProcessorMailbox;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.TicketStorage;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
@@ -27,6 +26,7 @@ import qouteall.imm_ptl.core.ducks.IEChunkMap;
 import qouteall.imm_ptl.core.ducks.IEDistanceManager;
 import qouteall.imm_ptl.core.ducks.IEServerChunkCache;
 import qouteall.imm_ptl.core.ducks.IEWorld;
+import qouteall.imm_ptl.core.McHelper;
 import qouteall.imm_ptl.core.platform_specific.IPConfig;
 import qouteall.q_misc_util.Helper;
 import qouteall.q_misc_util.my_util.RateStat;
@@ -59,8 +59,12 @@ import java.util.concurrent.Executor;
 public class ImmPtlChunkTickets {
     private static final Logger LOGGER = LogUtils.getLogger();
     
-    public static final TicketType<ChunkPos> TICKET_TYPE =
-        TicketType.create("imm_ptl", Comparator.comparingLong(ChunkPos::toLong));
+    public static final TicketType TICKET_TYPE =
+        Registry.register(
+            BuiltInRegistries.TICKET_TYPE,
+            McHelper.newResourceLocation("imm_ptl:chunk_loading"),
+            new TicketType(TicketType.NO_TIMEOUT, TicketType.FLAG_LOADING)
+        );
     
     // for debugging
     @SuppressWarnings("FieldMayBeFinal")
@@ -93,6 +97,8 @@ public class ImmPtlChunkTickets {
     private final ArrayList<LongLinkedOpenHashSet> chunksToAddTicketByDistance = new ArrayList<>();
     
     private final LongOpenHashSet waitingForLoading = new LongOpenHashSet();
+    private final it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap waitingAge = new it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap();
+    private static final int MAX_WAITING_TICKS = 200;
     
     private boolean isValid = true;
     
@@ -184,7 +190,6 @@ public class ImmPtlChunkTickets {
         }
         
         DistanceManager distanceManager = getDistanceManager(world);
-        Executor mainThreadExecutor = ((qouteall.imm_ptl.core.mixin.common.chunk_sync.IEDistanceManager) distanceManager).ip_getMainThreadExecutor();
         
         // clear the already loaded chunks
         waitingForLoading.removeIf((long chunkPos) -> {
@@ -200,13 +205,11 @@ public class ImmPtlChunkTickets {
                 return false;
             }
             
-            if (!resultNow.isSuccess()) {
-                LOGGER.error(
-                    "Chunk loading failure {} {} {}",
-                    world, new ChunkPos(chunkPos)
-                );
-            }
-            
+            // A failed result is NOT an error: before DistanceManager has applied the new ticket, the future of a not yet
+            // loaded chunk is an immediate failure. Free the throttling slot either way (this is what the 1.21 code did;
+            // an earlier 26.2 port made failed chunks wait 200 ticks, which throttled chunk loading to a crawl and
+            // stalled portal generation).
+            waitingAge.remove(chunkPos);
             return true;
         });
         
@@ -220,26 +223,26 @@ public class ImmPtlChunkTickets {
                     
                     long chunkPos = queue.removeFirstLong();
                     if (chunkPosToTicketInfo.containsKey(chunkPos)) {
-                        addTicket(distanceManager, chunkPos);
+                        addTicket(world, chunkPos);
                         
                         waitingForLoading.add(chunkPos);
                     }
                     else {
-                        LOGGER.warn("Chunk {} is not in the queue", new ChunkPos(chunkPos));
+                        LOGGER.warn("Chunk {} is not in the queue", ChunkPos.unpack(chunkPos));
                     }
                 }
             }
         }
     }
     
-    private static void addTicket(DistanceManager distanceManager, long chunkPos) {
+    private static void addTicket(ServerLevel world, long chunkPos) {
         if (!IPConfig.getConfig().enableImmPtlChunkLoading) {
             return;
         }
         
-        ChunkPos chunkPosObj = new ChunkPos(chunkPos);
-        distanceManager.addRegionTicket(
-            TICKET_TYPE, chunkPosObj, getLoadingRadius(), chunkPosObj
+        ChunkPos chunkPosObj = ChunkPos.unpack(chunkPos);
+        getTicketStorage(world).addTicketWithRadius(
+            TICKET_TYPE, chunkPosObj, getLoadingRadius()
         );
         
         if (enableDebugRateStat) {
@@ -251,7 +254,7 @@ public class ImmPtlChunkTickets {
         ServerLevel world,
         LongPredicate shouldKeepLoadingFunc
     ) {
-        DistanceManager distanceManager = getDistanceManager(world);
+        TicketStorage ticketStorage = getTicketStorage(world);
         
         chunkPosToTicketInfo.long2ObjectEntrySet().removeIf(e -> {
             long chunkPos = e.getLongKey();
@@ -261,14 +264,15 @@ public class ImmPtlChunkTickets {
             
             if (!keepLoading) {
                 waitingForLoading.remove(chunkPos);
+                waitingAge.remove(chunkPos);
                 
                 boolean pendingTicketAdding = getQueueByDistance(ticketInfo.distanceToSource)
                     .remove(chunkPos);
                 
                 if (!pendingTicketAdding) {
-                    ChunkPos chunkPosObj = new ChunkPos(chunkPos);
-                    distanceManager.removeRegionTicket(
-                        TICKET_TYPE, chunkPosObj, getLoadingRadius(), chunkPosObj
+                    ChunkPos chunkPosObj = ChunkPos.unpack(chunkPos);
+                    ticketStorage.removeTicketWithRadius(
+                        TICKET_TYPE, chunkPosObj, getLoadingRadius()
                     );
                 }
                 return true;
@@ -294,19 +298,14 @@ public class ImmPtlChunkTickets {
     }
     
     private static void removeAllTicketsInWorld(ServerLevel world, ImmPtlChunkTickets dimTicketManager) {
-        DistanceManager ticketManager = getDistanceManager(world);
+        TicketStorage ticketStorage = getTicketStorage(world);
         
         dimTicketManager.chunkPosToTicketInfo.keySet().forEach((long pos) -> {
-            SortedArraySet<Ticket<?>> tickets = ((IEDistanceManager) getDistanceManager(world))
-                .portal_getTicketSet(pos);
-            
-            // avoid removing ticket when iterating the ticket set
-            List<Ticket<?>> toRemove = tickets.stream()
+            List<Ticket> toRemove = ticketStorage.getTickets(pos).stream()
                 .filter(t -> t.getType() == TICKET_TYPE).toList();
             
-            ChunkPos chunkPos = new ChunkPos(pos);
-            for (Ticket<?> ticket : toRemove) {
-                ticketManager.removeRegionTicket(TICKET_TYPE, chunkPos, ticket.getTicketLevel(), chunkPos);
+            for (Ticket ticket : toRemove) {
+                ticketStorage.removeTicket(pos, ticket);
             }
         });
         
@@ -328,6 +327,10 @@ public class ImmPtlChunkTickets {
     
     public static DistanceManager getDistanceManager(ServerLevel world) {
         return ((IEServerChunkCache) world.getChunkSource()).ip_getDistanceManager();
+    }
+    
+    public static TicketStorage getTicketStorage(ServerLevel world) {
+        return world.getDataStorage().computeIfAbsent(TicketStorage.TYPE);
     }
     
     private static void cleanup(MinecraftServer server) {

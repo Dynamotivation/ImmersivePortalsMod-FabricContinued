@@ -1,6 +1,6 @@
 package qouteall.imm_ptl.core.render.renderer;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
@@ -51,41 +51,13 @@ public class RendererDebug extends PortalRenderer {
     }
     
     protected void doRenderPortal(Portal portal, Matrix4f modelView) {
-        if (RenderStates.getRenderedPortalNum() != 0) {
-            return;
-        }
-        
-        if (!testShouldRenderPortal(portal, modelView)) {
-            return;
-        }
-    
-        PortalRendering.pushPortalLayer(portal);
-        
-        GlStateManager._clearColor(1, 0, 1, 1);
-        GlStateManager._clearDepth(1);
-        GlStateManager._clear(
-            GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT,
-            Minecraft.ON_OSX
-        );
-        GL11.glDisable(GL11.GL_STENCIL_TEST);
-        
-        renderPortalContent(portal);
-    
-        PortalRendering.popPortalLayer();
     }
     
     private boolean testShouldRenderPortal(
         Portal portal,
         Matrix4f modelView
     ) {
-        return QueryManager.renderAndGetDoesAnySamplePass(() -> {
-            ViewAreaRenderer.renderPortalArea(
-                portal, Vec3.ZERO,
-                modelView,
-                RenderSystem.getProjectionMatrix(),
-                true, true,
-                true, true);
-        });
+        return false;
     }
     
     protected void renderPortals(Matrix4f modelView) {

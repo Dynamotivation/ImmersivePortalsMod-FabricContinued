@@ -1,12 +1,12 @@
 package qouteall.q_misc_util;
 
+import net.minecraft.util.profiling.Profiler;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.MultiLineLabel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -63,71 +63,43 @@ public class CustomTextOverlay {
      * {@link Gui#render(GuiGraphics, float)}
      * {@link net.minecraft.client.gui.screens.AlertScreen}
      */
-    public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
-        long currTime = System.nanoTime();
-        
-        boolean removes = ENTRIES.entrySet().removeIf(e -> e.getValue().clearingTime < currTime);
-        if (removes) {
-            multiLineLabelCache = null;
-        }
-        
+    public static void render(net.minecraft.client.gui.GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
         if (ENTRIES.isEmpty()) {
             return;
         }
-        
-        if (multiLineLabelCache == null) {
-            // don't make the first component the base component
-            // to avoid style override
-            MutableComponent component = Component.empty();
-            boolean isBeginning = true;
-            for (Entry entry : ENTRIES.values()) {
-                if (isBeginning) {
-                    isBeginning = false;
-                }
-                else {
-                    component.append("\n");
-                }
-                component.append(entry.component());
-            }
-            
-            multiLineLabelCache = MultiLineLabel.create(
-                Minecraft.getInstance().font,
-                component,
-                (Minecraft.getInstance().getWindow().getGuiScaledWidth() - 20)
-            );
-            assert multiLineLabelCache != null;
+
+        long now = System.nanoTime();
+        ENTRIES.values().removeIf(entry -> entry.clearingTime() < now);
+        if (ENTRIES.isEmpty()) {
+            return;
         }
-        
-        Minecraft minecraft = Minecraft.getInstance();
-        
-        guiGraphics.pose().pushPose();
-        
-        int guiScaledWidth = minecraft.getWindow().getGuiScaledWidth();
-        int guiScaledHeight = minecraft.getWindow().getGuiScaledHeight();
-        
-        Font font = minecraft.gui.getFont();
-        
-        minecraft.getProfiler().push("imm_ptl_custom_overlay");
-        if (renderAtBottomCenter) {
-            // Note: the parchment names are incorrect
-            multiLineLabelCache.renderCentered(
-                guiGraphics,
-                guiScaledWidth / 2, // x
-                (int) (guiScaledHeight * 0.75) // y
-            );
+
+        Minecraft client = Minecraft.getInstance();
+        Font font = client.font;
+
+        // all entries, in key order, one component per line (components can contain newlines which are split)
+        java.util.List<net.minecraft.util.FormattedCharSequence> lines = new java.util.ArrayList<>();
+        int maxWidth = Math.max(100, guiGraphics.guiWidth() - 40);
+        for (Entry entry : ENTRIES.values()) {
+            lines.addAll(font.split(entry.component(), maxWidth));
         }
-        else {
-            multiLineLabelCache.renderLeftAligned(
-                guiGraphics,
-                10, // x
-                10, // y
-                9, // line height
-                0xffffffff // color
-            );
+        if (lines.isEmpty()) {
+            return;
         }
-        
-        guiGraphics.pose().popPose();
-        
-        minecraft.getProfiler().pop();
+
+        int lineHeight = font.lineHeight + 1;
+        int totalHeight = lines.size() * lineHeight;
+        int screenWidth = guiGraphics.guiWidth();
+        int screenHeight = guiGraphics.guiHeight();
+        // above the hotbar / action bar
+        int y = renderAtBottomCenter ? screenHeight - 72 - totalHeight : 20;
+
+        for (net.minecraft.util.FormattedCharSequence line : lines) {
+            int width = font.width(line);
+            int x = (screenWidth - width) / 2;
+            guiGraphics.fill(x - 2, y - 1, x + width + 2, y + font.lineHeight, 0x80000000);
+            guiGraphics.text(font, line, x, y, 0xFFFFFFFF);
+            y += lineHeight;
+        }
     }
 }

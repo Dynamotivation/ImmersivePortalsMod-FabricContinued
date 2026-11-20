@@ -68,6 +68,27 @@ public class IPModEntryClient implements ClientModInitializer {
         
         initPortalRenderers();
         
+        // multi-line text overlay (wand hints, command output), replaces MixinGui_Overlay
+        net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
+            net.minecraft.resources.Identifier.fromNamespaceAndPath("immersive_portals", "custom_text_overlay"),
+            qouteall.q_misc_util.CustomTextOverlay::render
+        );
+
+        // 26.x: the debug screen is made of registered entries (replaces MixinDebugScreenOverlay)
+        net.minecraft.client.gui.components.debug.DebugScreenEntries.register(
+            net.minecraft.resources.Identifier.fromNamespaceAndPath("immersive_portals", "portal_debug"),
+            (displayer, level, clientChunk, serverChunk) -> {
+                java.util.List<String> lines =
+                    qouteall.imm_ptl.core.render.context_management.RenderStates.collectDebugText();
+                if (IPGlobal.moveDebugTextToTop) {
+                    lines.forEach(displayer::addPriorityLine);
+                }
+                else {
+                    lines.forEach(displayer::addLine);
+                }
+            }
+        );
+        
         boolean isSodiumPresent =
             FabricLoader.getInstance().isModLoaded("sodium");
         if (isSodiumPresent) {
@@ -91,7 +112,15 @@ public class IPModEntryClient implements ClientModInitializer {
         
         if (FabricLoader.getInstance().isModLoaded("iris")) {
             Helper.log("Iris is present");
-            IrisInterface.invoker = new IrisInterface.OnIrisPresent();
+            // reflective, so that nothing Iris-related is even verified when Iris is absent
+            try {
+                IrisInterface.invoker = (IrisInterface.Invoker) Class.forName(
+                    "qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterfaceOnPresent"
+                ).getDeclaredConstructor().newInstance();
+            }
+            catch (Throwable e) {
+                Helper.err("Failed to initialize the Iris compatibility, shader packs will hide portal views: " + e);
+            }
             ExperimentalIrisPortalRenderer.init();
             
             IPGlobal.CLIENT_TASK_LIST.addTask(MyTaskList.oneShotTask(() -> {

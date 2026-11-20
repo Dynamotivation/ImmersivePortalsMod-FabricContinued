@@ -1,5 +1,6 @@
 package qouteall.imm_ptl.core.teleportation;
 
+import net.minecraft.util.profiling.Profiler;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -139,7 +140,7 @@ public class ClientTeleportationManager {
             return;
         }
         
-        client.getProfiler().push("ip_teleport");
+        Profiler.get().push("ip_teleport");
         
         ClientPortalAnimationManagement.foreachCustomAnimatedPortals(
             portal -> {
@@ -199,7 +200,7 @@ public class ClientTeleportationManager {
         lastRecordStableTickTime = StableClientTimer.getStableTickTime();
         lastRecordStablePartialTicks = StableClientTimer.getStablePartialTicks();
         
-        client.getProfiler().pop();
+        Profiler.get().pop();
     }
     
     private static record TeleportationRec(
@@ -291,9 +292,9 @@ public class ClientTeleportationManager {
             Portal portal = teleportation.portal();
             Vec3 collidingPos = teleportation.worldCollisionPoint();
             
-            client.getProfiler().push("portal_teleport");
+            Profiler.get().push("portal_teleport");
             teleportPlayer(teleportation, partialTicks);
-            client.getProfiler().pop();
+            Profiler.get().pop();
             
             boolean allowOverlappedTeleport = portal.respectParallelOrientedPortal();
             
@@ -369,7 +370,7 @@ public class ClientTeleportationManager {
         
         ScaleUtils.onClientPlayerTeleported(portal);
         
-        player.connection.send(ClientPlayNetworking.createC2SPacket(
+        player.connection.send(ClientPlayNetworking.createServerboundPacket(
             new ImmPtlNetworking.TeleportPacket(
                 PortalAPI.clientDimKeyToInt(fromDimension),
                 thisTickEyePos,
@@ -430,7 +431,7 @@ public class ClientTeleportationManager {
     }
     
     public static void forceTeleportPlayer(ResourceKey<Level> toDimension, Vec3 destination) {
-        LOGGER.info("client player force teleported {} {}", toDimension.location(), destination);
+        LOGGER.info("client player force teleported {} {}", toDimension.identifier(), destination);
         
         ClientLevel fromWorld = client.level;
         assert fromWorld != null;
@@ -482,22 +483,25 @@ public class ClientTeleportationManager {
         toWorld.addEntity(player);
         ((IEAbstractClientPlayer) player).ip_setClientLevel(toWorld);
         
-        IEGameRenderer gameRenderer = (IEGameRenderer) Minecraft.getInstance().gameRenderer;
-        gameRenderer.ip_setLightmapTextureManager(ClientWorldLoader
-            .getDimensionRenderHelper(toDimension).lightmapTexture);
         
         client.level = toWorld;
         ((IEMinecraftClient) client).ip_setWorldRenderer(
             ClientWorldLoader.getWorldRenderer(toDimension)
         );
         
+        // camera level and lighting of the new dimension (the extractor was switched along with the renderer)
+        client.gameRenderer.setLevel(toWorld);
+        // Camera.setLevel does not refresh the camera's environment probe (ticked once per client tick): without this the
+        // frame of the switch renders the new dimension with the old dimension's sky/fog/light values (black frame)
+        ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) client.gameRenderer)
+            .ip_onPlayerChangedDimension(toWorld, newEyePos);
+
         if (client.particleEngine != null) {
             // avoid clearing all particles
             ((IEParticleManager) client.particleEngine).ip_setWorld(toWorld);
         }
         
-        client.getBlockEntityRenderDispatcher().setLevel(toWorld);
-        
+                
         if (vehicle != null) {
             Vec3 offset = McHelper.getVehicleOffsetFromPassenger(vehicle, player);
             Vec3 vehiclePos = player.position().add(offset);
@@ -510,13 +514,13 @@ public class ClientTeleportationManager {
                 player.position().add(offset),
                 McHelper.lastTickPosOf(player).add(offset)
             );
-            player.startRiding(vehicle, true);
+            player.startRiding(vehicle, true, false);
         }
         
         Helper.log(String.format(
             "Client Changed Dimension from %s to %s time: %s age: %s",
-            fromDimension.location(),
-            toDimension.location(),
+            fromDimension.identifier(),
+            toDimension.identifier(),
             tickTimeForTeleportation,
             player.tickCount
         ));
@@ -634,7 +638,7 @@ public class ClientTeleportationManager {
             return;
         }
         
-        Vec3 levitationVec = Vec3.atLowerCornerOf(levitationDir.getNormal());
+        Vec3 levitationVec = Vec3.atLowerCornerOf(levitationDir.getUnitVec3i());
         
         Vec3 offset = levitationVec.scale(delta);
         
@@ -709,13 +713,10 @@ public class ClientTeleportationManager {
             }
             
             // both of them are important for Minecart
-            entity.setPos(pos);
-            entity.lerpTo(
+            entity.snapTo(
                 pos.x, pos.y, pos.z,
-                entity.getYRot(), entity.getXRot(),
-                0
+                entity.getYRot(), entity.getXRot()
             );
-            entity.setPos(pos);
         }
     }
 }

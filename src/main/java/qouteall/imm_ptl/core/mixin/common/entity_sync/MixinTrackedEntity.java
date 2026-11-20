@@ -59,7 +59,10 @@ public abstract class MixinTrackedEntity implements IETrackedEntity {
     private SectionPos lastSectionPos;
     
     @Redirect(
-        method = "Lnet/minecraft/server/level/ChunkMap$TrackedEntity;broadcast(Lnet/minecraft/network/protocol/Packet;)V",
+        method = {
+            "Lnet/minecraft/server/level/ChunkMap$TrackedEntity;sendToTrackingPlayers(Lnet/minecraft/network/protocol/Packet;)V",
+            "Lnet/minecraft/server/level/ChunkMap$TrackedEntity;sendToTrackingPlayersFiltered(Lnet/minecraft/network/protocol/Packet;Ljava/util/function/Predicate;)V"
+        },
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/server/network/ServerPlayerConnection;send(Lnet/minecraft/network/protocol/Packet;)V"
@@ -78,7 +81,7 @@ public abstract class MixinTrackedEntity implements IETrackedEntity {
     
     @SuppressWarnings("rawtypes")
     @Redirect(
-        method = "Lnet/minecraft/server/level/ChunkMap$TrackedEntity;broadcastAndSend(Lnet/minecraft/network/protocol/Packet;)V",
+        method = "Lnet/minecraft/server/level/ChunkMap$TrackedEntity;sendToTrackingPlayersAndSelf(Lnet/minecraft/network/protocol/Packet;)V",
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;send(Lnet/minecraft/network/protocol/Packet;)V"
@@ -151,7 +154,7 @@ public abstract class MixinTrackedEntity implements IETrackedEntity {
         
         var watchRecMap = ImmPtlChunkTracking.getWatchRecordForChunk(
             entity.level().dimension(),
-            entity.chunkPosition().x, entity.chunkPosition().z
+            entity.chunkPosition().x(), entity.chunkPosition().z()
         );
         
         // no need to clamp it with render distance, as we check chunk watch records now
@@ -251,7 +254,7 @@ public abstract class MixinTrackedEntity implements IETrackedEntity {
         
         Packet spawnPacket = entity.getAddEntityPacket(serverEntity);
         Packet<ClientGamePacketListener> redirected = PacketRedirection.createRedirectedMessage(
-            entity.getServer(),
+            entity.level().getServer(),
             entity.level().dimension(), spawnPacket
         );
         seenBy.forEach(handler -> {

@@ -1,7 +1,9 @@
 package qouteall.imm_ptl.core.mixin.client;
 
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.InterpolationHandler;
 import net.minecraft.world.phys.Vec3;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -12,54 +14,45 @@ import qouteall.imm_ptl.core.McHelper;
 import qouteall.imm_ptl.core.ducks.IEEntity;
 import qouteall.imm_ptl.core.portal.Portal;
 
-@Mixin(LivingEntity.class)
-public class MixinLivingEntity_C {
+/**
+ * 26.x moved entity position interpolation into {@link InterpolationHandler}
+ * (it replaces the lerpX/lerpY/lerpZ/lerpSteps fields of LivingEntity).
+ * Avoid entity position interpolation when crossing portal to the same dimension.
+ * (Class name kept from the 1.21 port.)
+ */
+@Mixin(InterpolationHandler.class)
+public abstract class MixinLivingEntity_C {
     @Shadow
-    protected double lerpX;
-    
+    @Final
+    private Entity entity;
+
     @Shadow
-    protected double lerpY;
-    
-    @Shadow
-    protected double lerpZ;
-    
-    @Shadow
-    protected int lerpSteps;
-    
-    // avoid entity position interpolate when crossing portal to the same dimension
+    public abstract void cancel();
+
     @Inject(
-        method = "lerpTo",
+        method = "interpolateTo",
         at = @At("RETURN")
     )
-    private void onUpdateTrackedPositionAndAngles(
-        double x,
-        double y,
-        double z,
-        float yaw,
-        float pitch,
-        int interpolationSteps,
-        CallbackInfo ci
-    ) {
-        LivingEntity this_ = ((LivingEntity) (Object) this);
+    private void onInterpolateTo(Vec3 position, float yRot, float xRot, CallbackInfo ci) {
         if (!IPGlobal.allowClientEntityPosInterpolation) {
-            this_.setPos(x, y, z);
+            entity.setPos(position.x, position.y, position.z);
+            cancel();
             return;
         }
-        
-        Portal collidingPortal = ((IEEntity) this).ip_getCollidingPortal();
+
+        Portal collidingPortal = ((IEEntity) entity).ip_getCollidingPortal();
         if (collidingPortal != null) {
-            
-            double dx = this_.getX() - lerpX;
-            double dy = this_.getY() - lerpY;
-            double dz = this_.getZ() - lerpZ;
+            double dx = entity.getX() - position.x;
+            double dy = entity.getY() - position.y;
+            double dz = entity.getZ() - position.z;
             if (dx * dx + dy * dy + dz * dz > 4) {
-                Vec3 currPos = new Vec3(lerpX, lerpY, lerpZ);
                 McHelper.setPosAndLastTickPos(
-                    this_,
-                    currPos,
-                    currPos.subtract(McHelper.getWorldVelocity(this_))
+                    entity,
+                    position,
+                    position.subtract(McHelper.getWorldVelocity(entity))
                 );
-                McHelper.updateBoundingBox(this_);
+                McHelper.updateBoundingBox(entity);
+                cancel();
             }
         }
     }

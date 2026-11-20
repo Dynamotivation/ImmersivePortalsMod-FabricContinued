@@ -1,5 +1,6 @@
 package qouteall.imm_ptl.core.network;
 
+import net.minecraft.world.entity.EntitySpawnReason;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -17,7 +18,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -47,7 +48,7 @@ public class ImmPtlNetworking {
     ) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<TeleportPacket> TYPE =
             new CustomPacketPayload.Type<>(
-                ResourceLocation.fromNamespaceAndPath("imm_ptl", "teleport")
+                Identifier.fromNamespaceAndPath("imm_ptl", "teleport")
             );
         
         public static final StreamCodec<FriendlyByteBuf, TeleportPacket> CODEC = StreamCodec.of(
@@ -75,10 +76,10 @@ public class ImmPtlNetworking {
         
         public void handle(ServerPlayer player) {
             ResourceKey<Level> dim = PortalAPI.serverIntToDimKey(
-                player.server, dimensionId
+                player.level().getServer(), dimensionId
             );
             
-            ServerTeleportationManager.of(player.server).onPlayerTeleportedInClient(
+            ServerTeleportationManager.of(player.level().getServer()).onPlayerTeleportedInClient(
                 player, dim, eyePosBeforeTeleportation, portalId
             );
         }
@@ -131,6 +132,8 @@ public class ImmPtlNetworking {
      * {@link ClientboundAddEntityPacket}
      * This packet is redirected, so there is no need to contain dimension id
      */
+    private static final boolean DEBUG_PORTAL_SYNC = System.getProperty("ip.debugportals") != null;
+    
     public static record PortalSyncPacket(
         int id,
         UUID uuid,
@@ -199,11 +202,28 @@ public class ImmPtlNetworking {
                     return;
                 }
                 
+                if (DEBUG_PORTAL_SYNC) {
+                    LOGGER.info(
+                        "[PortalSync] update {} from dest {} {} to pos {},{},{} data {}",
+                        existingPortal.getId(), existingPortal.getDestDim().identifier(),
+                        existingPortal.getDestPos(), x, y, z, extraData
+                    );
+                }
                 existingPortal.acceptDataSync(new Vec3(x, y, z), extraData);
+                if (DEBUG_PORTAL_SYNC) {
+                    LOGGER.info(
+                        "[PortalSync] after update {} dest {} {} origin {}",
+                        existingPortal.getId(), existingPortal.getDestDim().identifier(),
+                        existingPortal.getDestPos(), existingPortal.getOriginPos()
+                    );
+                }
             }
             else {
                 // spawn new portal
-                Entity entity = entityType.create(world);
+                if (DEBUG_PORTAL_SYNC) {
+                    LOGGER.info("[PortalSync] spawn {} {} in {} data {}", id, entityType, dimension.identifier(), extraData);
+                }
+                Entity entity = entityType.create(world, EntitySpawnReason.MOB_SUMMONED);
                 Validate.notNull(entity, "Entity type is null");
                 
                 if (!(entity instanceof Portal portal)) {
@@ -214,7 +234,7 @@ public class ImmPtlNetworking {
                 entity.setId(id);
                 entity.setUUID(uuid);
                 entity.syncPacketPositionCodec(x, y, z);
-                entity.moveTo(x, y, z);
+                entity.snapTo(x, y, z);
                 
                 portal.readPortalDataFromNbt(extraData);
                 
@@ -235,16 +255,61 @@ public class ImmPtlNetworking {
         }
     }
     
+    /**
+     * 26.x made {@link net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket} a record
+     * with a fixed codec, so the dimension can no longer be appended to it.
+     * This payload is sent right before the position packet and carries the dimension
+     * for the upcoming teleport id.
+     */
+    public static record PlayerPositionDimensionPacket(
+        int teleportId, ResourceKey<Level> dimension
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<PlayerPositionDimensionPacket> TYPE =
+            new CustomPacketPayload.Type<>(
+                McHelper.newResourceLocation("imm_ptl:player_position_dimension")
+            );
+        
+        public static final StreamCodec<FriendlyByteBuf, PlayerPositionDimensionPacket> CODEC =
+            StreamCodec.of(
+                (b, p) -> {
+                    b.writeVarInt(p.teleportId);
+                    b.writeResourceKey(p.dimension);
+                },
+                b -> new PlayerPositionDimensionPacket(
+                    b.readVarInt(), b.readResourceKey(Registries.DIMENSION)
+                )
+            );
+        
+        @Override
+        public @NotNull Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+        
+        @Environment(EnvType.CLIENT)
+        public void handleClient() {
+            pendingPositionDimensions.put(teleportId, dimension);
+        }
+    }
+    
+    // client side: teleport id -> dimension of the pending position packet
+    @Environment(EnvType.CLIENT)
+    public static final java.util.Map<Integer, ResourceKey<Level>> pendingPositionDimensions =
+        new java.util.concurrent.ConcurrentHashMap<>();
+    
     public static void init() {
-        PayloadTypeRegistry.playC2S().register(
+        PayloadTypeRegistry.serverboundPlay().register(
             TeleportPacket.TYPE, TeleportPacket.CODEC
         );
         
-        PayloadTypeRegistry.playS2C().register(
+        PayloadTypeRegistry.clientboundPlay().register(
+            PlayerPositionDimensionPacket.TYPE, PlayerPositionDimensionPacket.CODEC
+        );
+        
+        PayloadTypeRegistry.clientboundPlay().register(
             GlobalPortalSyncPacket.TYPE, GlobalPortalSyncPacket.CODEC
         );
         
-        PayloadTypeRegistry.playS2C().register(
+        PayloadTypeRegistry.clientboundPlay().register(
             PortalSyncPacket.TYPE, PortalSyncPacket.CODEC
         );
         
@@ -255,6 +320,11 @@ public class ImmPtlNetworking {
     }
     
     public static void initClient() {
+        ClientPlayNetworking.registerGlobalReceiver(
+            PlayerPositionDimensionPacket.TYPE,
+            (packet, c) -> packet.handleClient()
+        );
+        
         ClientPlayNetworking.registerGlobalReceiver(
             GlobalPortalSyncPacket.TYPE,
             (packet, c) -> packet.handle()

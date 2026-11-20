@@ -44,25 +44,5 @@ public class IPPortingLibCompat {
     
     @Environment(EnvType.CLIENT)
     public static void setIsStencilEnabled(RenderTarget renderTarget, boolean cond) {
-        if (isPortingLibPresent) {
-            
-            boolean oldValue = getIsStencilEnabled(renderTarget);
-            
-            if (oldValue != cond) {
-                Helper.noError(
-                    () -> {
-                        f_port_lib$stencilEnabled.set(renderTarget, cond);
-                        return null;
-                    }
-                );
-                renderTarget.resize(
-                    renderTarget.viewWidth, renderTarget.viewHeight, Minecraft.ON_OSX
-                );
-            }
-        }
-        else {
-            ((IEFrameBuffer) renderTarget).ip_setIsStencilBufferEnabledAndReload(cond);
-        }
-        
     }
 }

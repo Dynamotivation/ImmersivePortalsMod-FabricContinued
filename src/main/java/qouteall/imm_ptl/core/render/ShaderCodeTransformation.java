@@ -1,6 +1,5 @@
 package qouteall.imm_ptl.core.render;
 
-import com.mojang.blaze3d.shaders.Program;
 import com.mojang.logging.LogUtils;
 import me.shedaniel.cloth.clothconfig.shadowed.org.yaml.snakeyaml.Yaml;
 import org.jetbrains.annotations.Nullable;
@@ -19,13 +18,7 @@ public class ShaderCodeTransformation {
         vs, fs
     }
     
-    private static boolean matches(ShaderType me, Program.Type type) {
-        if (type == Program.Type.FRAGMENT) {
-            return me == ShaderType.fs;
-        }
-        else if (type == Program.Type.VERTEX) {
-            return me == ShaderType.vs;
-        }
+    private static boolean matches(ShaderType me, ShaderType type) {
         return false;
     }
     
@@ -69,38 +62,13 @@ public class ShaderCodeTransformation {
         }
     }
     
-    public static String transform(Program.Type type, String shaderId, String inputCode) {
-        if (configs == null) {
-            LOGGER.info("Shader Transform Skipping {}", shaderId);
-            return inputCode;
-        }
-        
-        Config selected = getConfig(type, shaderId);
-        
-        if (selected == null) {
-            return inputCode;
-        }
-        
-        String result = inputCode;
-        
-        for (TransformationEntry entry : selected.transformations) {
-            String replacement = String.join("\n", entry.replacement);
-            result = result.replaceAll(entry.pattern, replacement);
-        }
-        
-        if (selected.debugOutput) {
-            LOGGER.info("Shader Transformed {}\n{}", shaderId, result);
-        }
-        
-        return result;
+    public static String transform(ShaderType type, String shaderId, String inputCode) {
+        return null;
     }
     
     @Nullable
-    private static Config getConfig(Program.Type type, String shaderId) {
-        return configs.stream().filter(
-            config -> matches(config.type, type) &&
-                config.affectedShaders.contains(shaderId)
-        ).findFirst().orElse(null);
+    private static Config getConfig(ShaderType type, String shaderId) {
+        return null;
     }
     
     public static boolean shouldAddUniform(String shaderName) {

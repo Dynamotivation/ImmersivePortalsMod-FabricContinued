@@ -1,10 +1,11 @@
 package qouteall.imm_ptl.core.portal;
 
+import net.minecraft.world.level.storage.ValueInput;
+import qouteall.q_misc_util.my_util.ValueTagBridge;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -13,7 +14,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
@@ -24,12 +27,17 @@ import qouteall.q_misc_util.my_util.IntBox;
 
 public class LoadingIndicatorEntity extends Entity {
     public static final EntityType<LoadingIndicatorEntity> entityType =
-        FabricEntityTypeBuilder.create(
-            MobCategory.MISC,
-            (EntityType.EntityFactory<LoadingIndicatorEntity>) LoadingIndicatorEntity::new
-        ).dimensions(
-            EntityDimensions.fixed(1, 1)
-        ).fireImmune().trackable(96, 20).build();
+        EntityType.Builder.of(
+            (EntityType.EntityFactory<LoadingIndicatorEntity>) LoadingIndicatorEntity::new,
+            MobCategory.MISC
+        ).sized(1, 1)
+            .fireImmune()
+            .clientTrackingRange(6) // 96 blocks
+            .updateInterval(20)
+            .build(net.minecraft.resources.ResourceKey.create(
+                net.minecraft.core.registries.Registries.ENTITY_TYPE,
+                net.minecraft.resources.Identifier.fromNamespaceAndPath("immersive_portals", "loading_indicator")
+            ));
     
     private static final EntityDataAccessor<Component> TEXT = SynchedEntityData.defineId(
         LoadingIndicatorEntity.class, EntityDataSerializers.COMPONENT
@@ -69,12 +77,7 @@ public class LoadingIndicatorEntity extends Entity {
         if (tickCount > 40) {
             LocalPlayer player = Minecraft.getInstance().player;
             
-            if (player != null &&
-                player.level() == level() &&
-                player.position().distanceToSqr(position()) < 16 * 16
-            ) {
-                showMessageClient();
-            }
+            // no action bar loading text: the portal shows a placeholder texture instead (PortalViewRenderer)
         }
     }
     
@@ -113,12 +116,25 @@ public class LoadingIndicatorEntity extends Entity {
     }
     
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
+    public boolean hurtServer(ServerLevel level, DamageSource source, float damage) {
+        return false;
+    }
+    
+    @Override
+    protected void readAdditionalSaveData(ValueInput ip_input) {
+        CompoundTag tag = ValueTagBridge.toTag(ip_input);
     
     }
     
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
+    protected void addAdditionalSaveData(ValueOutput ip_output) {
+        CompoundTag ip_tag = new CompoundTag();
+        addAdditionalSaveDataTag(ip_tag);
+        ValueTagBridge.writeTag(ip_output, ip_tag);
+    }
+    
+    // CompoundTag based implementation kept from the 1.21 code, see ValueTagBridge
+    protected void addAdditionalSaveDataTag(CompoundTag tag) {
     
     }
     
@@ -148,8 +164,7 @@ public class LoadingIndicatorEntity extends Entity {
     
     @Environment(EnvType.CLIENT)
     private void showMessageClient() {
-        Gui inGameHud = Minecraft.getInstance().gui;
-        inGameHud.setOverlayMessage(
+        Minecraft.getInstance().gui.hud.setOverlayMessage(
             getText(), false
         );
     }

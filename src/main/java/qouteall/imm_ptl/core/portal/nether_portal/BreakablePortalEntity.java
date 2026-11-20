@@ -1,10 +1,14 @@
 package qouteall.imm_ptl.core.portal.nether_portal;
 
+import net.minecraft.world.level.storage.ValueInput;
+import qouteall.q_misc_util.my_util.ValueTagBridge;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.core.BlockPos;
+import qouteall.imm_ptl.core.platform_specific.O_O;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
@@ -60,17 +64,24 @@ public abstract class BreakablePortalEntity extends Portal {
     
     @Override
     public boolean isPortalValid() {
-        if (level().isClientSide) {
+        if (level().isClientSide()) {
             return super.isPortalValid();
         }
         return super.isPortalValid() && blockPortalShape != null && reversePortalId != null;
     }
     
     @Override
-    protected void readAdditionalSaveData(CompoundTag compoundTag) {
-        super.readAdditionalSaveData(compoundTag);
+    protected void readAdditionalSaveData(ValueInput ip_input) {
+        readAdditionalSaveDataTag(ValueTagBridge.toTag(ip_input));
+    }
+
+    // Also used by the client data sync (Portal.readPortalDataFromNbt / acceptDataSync), which only calls the tag
+    // version: without this override reversePortalId stayed null on the client
+    @Override
+    protected void readAdditionalSaveDataTag(CompoundTag compoundTag) {
+        super.readAdditionalSaveDataTag(compoundTag);
         if (compoundTag.contains("netherPortalShape")) {
-            blockPortalShape = new BlockPortalShape(compoundTag.getCompound("netherPortalShape"));
+            blockPortalShape = new BlockPortalShape(compoundTag.getCompoundOrEmpty("netherPortalShape"));
         }
         
         reversePortalId = Helper.getUuid(compoundTag, "reversePortalId");
@@ -79,22 +90,22 @@ public abstract class BreakablePortalEntity extends Portal {
             reversePortalId = Util.NIL_UUID;
         }
         
-        unbreakable = compoundTag.getBoolean("unbreakable");
+        unbreakable = compoundTag.getBooleanOr("unbreakable", false);
         
         if (compoundTag.contains("overlayBlockState")) {
             BlockState overlayBlockState = NbtUtils.readBlockState(
                 level().holderLookup(Registries.BLOCK),
-                compoundTag.getCompound("overlayBlockState")
+                compoundTag.getCompoundOrEmpty("overlayBlockState")
             );
             if (overlayBlockState.isAir()) {
                 overlayInfo = null;
             }
             else {
-                double overlayOpacity = compoundTag.getDouble("overlayOpacity");
+                double overlayOpacity = compoundTag.getDoubleOr("overlayOpacity", 0.0);
                 if (overlayOpacity == 0) {
                     overlayOpacity = 0.5;
                 }
-                double overlayOffset = compoundTag.getDouble("overlayOffset");
+                double overlayOffset = compoundTag.getDoubleOr("overlayOffset", 0.0);
                 DQuaternion rotation = Helper.getQuaternion(compoundTag, "overlayRotation");
                 
                 overlayInfo = new OverlayInfo(
@@ -108,8 +119,15 @@ public abstract class BreakablePortalEntity extends Portal {
     }
     
     @Override
-    protected void addAdditionalSaveData(CompoundTag compoundTag) {
-        super.addAdditionalSaveData(compoundTag);
+    protected void addAdditionalSaveData(ValueOutput ip_output) {
+        CompoundTag ip_tag = new CompoundTag();
+        addAdditionalSaveDataTag(ip_tag);
+        ValueTagBridge.writeTag(ip_output, ip_tag);
+    }
+    
+    // CompoundTag based implementation kept from the 1.21 code, see ValueTagBridge
+    protected void addAdditionalSaveDataTag(CompoundTag compoundTag) {
+        super.addAdditionalSaveDataTag(compoundTag);
         if (blockPortalShape != null) {
             compoundTag.put("netherPortalShape", blockPortalShape.toTag());
         }
@@ -125,6 +143,9 @@ public abstract class BreakablePortalEntity extends Portal {
     }
     
     private void breakPortalOnThisSide() {
+        if (isRemoved()) {
+            return;
+        }
         blockPortalShape.area.forEach(
             blockPos -> {
                 if (level().getBlockState(blockPos).getBlock() == PortalPlaceholderBlock.instance) {
@@ -139,19 +160,80 @@ public abstract class BreakablePortalEntity extends Portal {
         Helper.log("Broke " + this);
     }
     
+    private boolean integrityCheckScheduled = false;
+    
     public void notifyPlaceholderUpdate() {
         isNotified = true;
+        
+        // The check normally runs in the entity tick, but a portal in a dimension the player only looks into (through
+        // a portal) may not be ticking. So run it from the server task list, after the current block update finished.
+        if (level().isClientSide() || unbreakable || isRemoved() || integrityCheckScheduled) {
+            return;
+        }
+        integrityCheckScheduled = true;
+        ServerTaskList.of(level().getServer()).addTask(MyTaskList.withRetryNumberLimit(
+            1,
+            () -> {
+                integrityCheckScheduled = false;
+                if (isRemoved()) {
+                    return true;
+                }
+                isNotified = false;
+                checkPortalIntegrity();
+                if (shouldBreakPortal) {
+                    breakPortalOnThisSide();
+                }
+                return true;
+            },
+            () -> integrityCheckScheduled = false
+        ));
     }
     
     private BreakablePortalEntity getReversePortal() {
         
-        ServerLevel world = getServer().getLevel(getDestDim());
+        ServerLevel world = level().getServer().getLevel(getDestDim());
         Entity entity = world.getEntity(reversePortalId);
         if (entity instanceof BreakablePortalEntity) {
             return (BreakablePortalEntity) entity;
         }
-        else {
-            return null;
+        
+        // the stored id can be stale (relinking, regeneration): find the reverse portal by geometry
+        if (isOtherSideChunkLoaded()) {
+            List<BreakablePortalEntity> revs = findReversePortals(this);
+            if (!revs.isEmpty()) {
+                return revs.get(0);
+            }
+        }
+        return null;
+    }
+    
+    // break the partner immediately instead of only flagging it: a flag is only handled in the partner's own tick,
+    // which does not happen when the partner's chunk is only loaded for portal rendering
+    private void breakReverse(BreakablePortalEntity reversePortal) {
+        syncBrokenFrameBlocks(reversePortal);
+        reversePortal.shouldBreakPortal = true;
+        reversePortal.breakPortalOnThisSide();
+    }
+    
+    // A frame block that was mined on this side is also broken on the other side, so the same border block does not
+    // have to be mined twice. The matching block is found by transforming the block centre through the portal.
+    private void syncBrokenFrameBlocks(BreakablePortalEntity reversePortal) {
+        if (blockPortalShape == null || reversePortal.blockPortalShape == null || level().isClientSide()) {
+            return;
+        }
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel) || !(reversePortal.level() instanceof net.minecraft.server.level.ServerLevel otherLevel)) {
+            return;
+        }
+        for (BlockPos pos : blockPortalShape.frameAreaWithoutCorner) {
+            if (O_O.isObsidian(level().getBlockState(pos))) {
+                continue;
+            }
+            BlockPos other = BlockPos.containing(transformPoint(net.minecraft.world.phys.Vec3.atCenterOf(pos)));
+            if (reversePortal.blockPortalShape.frameAreaWithoutCorner.contains(other)
+                && O_O.isObsidian(otherLevel.getBlockState(other))
+            ) {
+                otherLevel.destroyBlock(other, false);
+            }
         }
     }
     
@@ -177,7 +259,7 @@ public abstract class BreakablePortalEntity extends Portal {
     }
     
     private void checkPortalIntegrity() {
-        Validate.isTrue(!level().isClientSide);
+        Validate.isTrue(!level().isClientSide());
         
         if (!isPortalValid()) {
             remove(RemovalReason.KILLED);
@@ -240,10 +322,10 @@ public abstract class BreakablePortalEntity extends Portal {
         
         BreakablePortalEntity reversePortal = getReversePortal();
         if (reversePortal != null) {
-            reversePortal.shouldBreakPortal = true;
+            breakReverse(reversePortal);
         }
         else {
-            ServerTaskList.of(getServer()).addTask(MyTaskList.withRetryNumberLimit(
+            ServerTaskList.of(level().getServer()).addTask(MyTaskList.withRetryNumberLimit(
                 30,
                 () -> {
                     if (this.isRemoved()) {
@@ -257,7 +339,7 @@ public abstract class BreakablePortalEntity extends Portal {
                     
                     BreakablePortalEntity reversePortal1 = getReversePortal();
                     if (reversePortal1 != null) {
-                        reversePortal1.shouldBreakPortal = true;
+                        breakReverse(reversePortal1);
                     }
                     
                     return true;
@@ -281,7 +363,8 @@ public abstract class BreakablePortalEntity extends Portal {
     }
     
     public boolean isOneWay() {
-        return reversePortalId.equals(Util.NIL_UUID);
+        // null: the entity is not fully initialized yet (e.g. on the client before the sync data was read)
+        return reversePortalId != null && reversePortalId.equals(Util.NIL_UUID);
     }
     
     public void markOneWay() {

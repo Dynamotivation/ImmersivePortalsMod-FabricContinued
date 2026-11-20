@@ -444,7 +444,14 @@ public class ClientWorldLoader {
                 finalWorldExtractor.setLevel(finalNewWorld);
                 finalWorldExtractor.onResourceManagerReload(CLIENT.getResourceManager());
             });
-            // TODO(26.2): the CloudRenderer of secondary renderers is not reloaded (no clouds in portal views)
+            // the cloud renderer of the secondary renderer is not a registered reload listener: load its texture now
+            net.minecraft.client.renderer.CloudRenderer clouds = worldRenderer.cloudRenderer();
+            qouteall.imm_ptl.core.mixin.client.render.IECloudRenderer cloudAccess =
+                (qouteall.imm_ptl.core.mixin.client.render.IECloudRenderer) clouds;
+            cloudAccess.ip_apply(
+                cloudAccess.ip_prepare(CLIENT.getResourceManager(), Profiler.get()),
+                CLIENT.getResourceManager(), Profiler.get()
+            );
 
             CLIENT_WORLD_MAP.put(dimension, newWorld);
             WORLD_RENDERER_MAP.put(dimension, worldRenderer);

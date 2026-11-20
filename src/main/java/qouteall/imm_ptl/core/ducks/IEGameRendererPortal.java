@@ -19,4 +19,10 @@ public interface IEGameRendererPortal {
      */
     void ip_renderLightmap(net.minecraft.client.renderer.Lightmap lightmap,
                            net.minecraft.client.renderer.state.LightmapRenderState state);
+    
+    /**
+     * Writes the Globals UBO (CameraBlockPos/CameraOffset used by vanilla terrain.vsh, GameTime) for a portal view camera.
+     * GameRenderer.render rewrites it for the main view later in the frame.
+     */
+    void ip_updateGlobalSettingsForView(net.minecraft.client.DeltaTracker deltaTracker, net.minecraft.world.phys.Vec3 cameraPos);
 }

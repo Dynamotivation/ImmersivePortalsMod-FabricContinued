@@ -48,6 +48,10 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
     @Shadow
     public abstract net.minecraft.client.renderer.state.GameRenderState gameRenderState();
     
+    @Shadow
+    @Final
+    private net.minecraft.client.renderer.GlobalSettingsUniform globalSettingsUniform;
+    
     @Unique
     private ProjectionMatrixBuffer ip_portalProjectionBuffer;
     
@@ -104,5 +108,19 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
         if (override != null) {
             cir.setReturnValue(override);
         }
+    }
+    
+    @Override
+    public void ip_updateGlobalSettingsForView(DeltaTracker deltaTracker, net.minecraft.world.phys.Vec3 cameraPos) {
+        net.minecraft.client.renderer.state.GameRenderState state = gameRenderState();
+        globalSettingsUniform.update(
+            state.windowRenderState.width, state.windowRenderState.height,
+            state.optionsRenderState.glintStrength,
+            minecraft.level == null ? 0L : minecraft.level.getGameTime(),
+            deltaTracker,
+            state.optionsRenderState.menuBackgroundBlurriness,
+            cameraPos,
+            state.optionsRenderState.textureFiltering == net.minecraft.client.TextureFilteringMethod.RGSS
+        );
     }
 }

@@ -110,6 +110,42 @@ public class PortalViewRenderer {
         }
         return cloudRendererPool.get(cloudRenderersUsed++);
     }
+
+    // fog UBOs for portal views: FogRenderer.updateBuffer maps the CURRENT slot of a ring buffer that only rotates once
+    // per frame (unsynchronized persistent mapping), so the main view's later write would replace the fog of every
+    // portal view rendered this frame
+    private static final java.util.List<FogRenderer> fogRendererPool = new java.util.ArrayList<>();
+    private static int fogRenderersUsed = 0;
+
+    private static FogRenderer acquireFogRenderer() {
+        if (fogRenderersUsed >= fogRendererPool.size()) {
+            fogRendererPool.add(new FogRenderer());
+        }
+        return fogRendererPool.get(fogRenderersUsed++);
+    }
+
+    // secondary level renderers that rendered a view last frame: Minecraft only calls endFrame() on its levelRenderer
+    // (Sodium's per-renderer terrain uniform storage never rotates/shrinks otherwise)
+    private static final java.util.Set<LevelRenderer> renderersUsed =
+        java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+
+    private static void endFrameOfViewResources() {
+        // rotating at the start of the next frame puts the fence after all commands of the previous frame
+        for (int i = 0; i < cloudRenderersUsed; i++) {
+            cloudRendererPool.get(i).endFrame();
+        }
+        cloudRenderersUsed = 0;
+        for (int i = 0; i < fogRenderersUsed; i++) {
+            fogRendererPool.get(i).endFrame();
+        }
+        fogRenderersUsed = 0;
+        for (LevelRenderer renderer : renderersUsed) {
+            if (renderer != client.levelRenderer) {
+                renderer.endFrame();
+            }
+        }
+        renderersUsed.clear();
+    }
     private static com.mojang.blaze3d.textures.GpuTextureView activeLightmap = null;
     
     public static com.mojang.blaze3d.textures.GpuTextureView getActiveLightmapOverride() {
@@ -165,6 +201,11 @@ public class PortalViewRenderer {
         endFrame();
         cloudRendererPool.forEach(net.minecraft.client.renderer.CloudRenderer::close);
         cloudRendererPool.clear();
+        cloudRenderersUsed = 0;
+        fogRendererPool.forEach(FogRenderer::close);
+        fogRendererPool.clear();
+        fogRenderersUsed = 0;
+        renderersUsed.clear();
         cloudTextureData = null;
         lightmaps.values().forEach(net.minecraft.client.renderer.Lightmap::close);
         lightmaps.clear();
@@ -210,7 +251,7 @@ public class PortalViewRenderer {
     public static void onBeforeExtract(GameRenderer gameRenderer, DeltaTracker deltaTracker) {
         endFrame();
         frameCounter++;
-        cloudRenderersUsed = 0;
+        endFrameOfViewResources();
 
         if (isRenderingViews || client.level == null || client.player == null) {
             return;
@@ -458,15 +499,38 @@ public class PortalViewRenderer {
         cameraState.viewRotationMatrix.set(viewMatrix);
         cameraState.projectionMatrix.set(projectionMatrix);
 
+        // vanilla decides the dark lower sky disc by the PLAYER's eye height in the destination level
+        // (SkyRenderer.shouldRenderDarkDisc); use the virtual camera instead
+        net.minecraft.client.renderer.state.level.SkyRenderState skyState =
+            gameRenderer.gameRenderState().levelRenderState.skyRenderState;
+        skyState.shouldRenderDarkDisc =
+            cameraPos.y - destWorld.getLevelData().getHorizonHeight(destWorld) < 0.0;
+
         // render
         activeTarget = target;
 
         GpuBufferSlice projectionBuffer = ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer)
             .ip_getPortalProjectionBuffer(new Matrix4f(cameraState.projectionMatrix));
         RenderSystem.setProjectionMatrix(projectionBuffer, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
+        // vanilla terrain.vsh positions sections relative to Globals.CameraBlockPos/CameraOffset, which still hold the
+        // previous frame's MAIN camera here (written in GameRenderer.render). Not needed with Sodium, harmless with it.
+        ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_updateGlobalSettingsForView(deltaTracker, cameraPos);
 
-        fogRenderer.updateBuffer(cameraState.fogData);
-        GpuBufferSlice terrainFog = fogRenderer.getBuffer(FogRenderer.FogMode.WORLD);
+        // own fog UBO per view (see fogRendererPool). fogRenderer.setupFog above must stay on the main FogRenderer:
+        // Sodium reads its fog parameters from there in LevelExtractor.extract
+        FogRenderer viewFogRenderer = acquireFogRenderer();
+        viewFogRenderer.updateBuffer(cameraState.fogData);
+        GpuBufferSlice terrainFog = viewFogRenderer.getBuffer(FogRenderer.FogMode.WORLD);
+
+        // Sodium draws terrain with its own captured projection (set in GameRenderer.renderLevel, i.e. the previous
+        // frame's main projection at this point): make it use the oblique projection of this view too
+        Matrix4f sodiumProjection = SodiumProjectionCompat.getCapturedProjection(gameRenderer);
+        Matrix4f savedSodiumProjection = sodiumProjection == null ? null : new Matrix4f(sodiumProjection);
+        if (sodiumProjection != null) {
+            sodiumProjection.set(cameraState.projectionMatrix);
+        }
+
+        renderersUsed.add(destRenderer);
 
         qouteall.imm_ptl.core.ducks.IELevelRendererPortal rendererAccess =
             (qouteall.imm_ptl.core.ducks.IELevelRendererPortal) destRenderer;
@@ -481,6 +545,9 @@ public class PortalViewRenderer {
         }
         finally {
             rendererAccess.ip_setCloudRenderer(originalClouds);
+            if (sodiumProjection != null) {
+                sodiumProjection.set(savedSodiumProjection);
+            }
         }
     }
 

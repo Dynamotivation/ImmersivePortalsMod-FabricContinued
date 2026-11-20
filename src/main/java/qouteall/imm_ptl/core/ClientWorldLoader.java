@@ -415,6 +415,9 @@ public class ClientWorldLoader {
                 currentProperty.isHardcore(),
                 ((IEClientLevelData) currentProperty).ip_getIsFlat()
             );
+            // start with the synced game time: every ClientLevel.tick() calls the SHARED ClientClockManager.tick(gameTime),
+            // and a level at game time 0 would shift all world clocks by -gameTime until the next time sync packet
+            properties.setGameTime(currentProperty.getGameTime());
             newWorld = new ClientLevel(
                 mainNetHandler,
                 properties,

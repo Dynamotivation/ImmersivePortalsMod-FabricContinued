@@ -183,4 +183,17 @@ public abstract class MixinClientLevel implements IEClientWorld {
     public void ip_setTickRateManager(TickRateManager cond) {
         tickRateManager = cond;
     }
+
+    // vanilla culls particles by distance to the main camera, which is in another dimension's coordinates
+    @com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation(
+        method = "doAddParticle",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;position()Lnet/minecraft/world/phys/Vec3;")
+    )
+    private net.minecraft.world.phys.Vec3 ip_particleCameraPos(
+        net.minecraft.client.Camera camera,
+        com.llamalad7.mixinextras.injector.wrapoperation.Operation<net.minecraft.world.phys.Vec3> original
+    ) {
+        net.minecraft.world.phys.Vec3 center = ClientWorldLoader.remoteParticleCenter;
+        return center != null ? center : original.call(camera);
+    }
 }

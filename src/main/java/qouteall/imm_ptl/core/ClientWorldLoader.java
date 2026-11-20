@@ -134,6 +134,9 @@ public class ClientWorldLoader {
         }
     }
     
+    // while ticking a remote world: the position of the virtual camera, used to distance-cull particles
+    public static net.minecraft.world.phys.Vec3 remoteParticleCenter = null;
+
     public static void disposeRenderHelpers() {
         RENDER_HELPER_MAP.values().forEach(DimensionRenderHelper::cleanUp);
         RENDER_HELPER_MAP.clear();
@@ -144,19 +147,32 @@ public class ClientWorldLoader {
         
         withSwitchedWorld(newWorld, () -> {
             try {
+                remoteParticleCenter = nearbyPortals.stream()
+                    .filter(portal -> portal.getDestDim() == newWorld.dimension())
+                    .findFirst()
+                    .map(portal -> portal.transformPoint(CLIENT.player.position()))
+                    .orElse(null);
                 newWorld.tickEntities();
+                newWorld.tickBlockEntities();
                 newWorld.tick(() -> true);
                 
                 if (!CLIENT.isPaused()) {
                     tickRemoteWorldRandomTicksClient(newWorld, nearbyPortals);
                 }
                 
+                // Minecraft.particleEngine is this dimension's engine while the world is switched
+                if (!CLIENT.isPaused()) {
+                    CLIENT.particleEngine.tick();
+                }
                 newWorld.pollLightUpdates();
             }
             catch (Throwable e) {
                 if (LOG_LIMIT.tryDecrement()) {
                     LOGGER.error("", e);
                 }
+            }
+            finally {
+                remoteParticleCenter = null;
             }
         });
     }

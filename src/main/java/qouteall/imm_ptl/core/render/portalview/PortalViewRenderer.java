@@ -600,6 +600,26 @@ public class PortalViewRenderer {
                     builder.addVertex((float) p2x, (float) p2y, (float) p2z);
                 }
             );
+            // Right before the teleport the camera is closer to the pane than the near plane, which cuts a hole into
+            // the pane (the real world behind it shows). Cover the screen just beyond the near plane instead.
+            double planeDistance = java.lang.Math.abs(portal.getDistanceToPlane(cameraPos));
+            if (planeDistance < 0.25
+                && portal.getDistanceToNearestPointInPortal(cameraPos) < planeDistance + 0.02
+            ) {
+                Matrix4f inverseView = viewRotation.invert(new Matrix4f());
+                float z = -0.07f;
+                float e = 1.0f;
+                Vector3f c0 = inverseView.transformPosition(new Vector3f(-e, -e, z));
+                Vector3f c1 = inverseView.transformPosition(new Vector3f(e, -e, z));
+                Vector3f c2 = inverseView.transformPosition(new Vector3f(e, e, z));
+                Vector3f c3 = inverseView.transformPosition(new Vector3f(-e, e, z));
+                builder.addVertex(c0.x, c0.y, c0.z);
+                builder.addVertex(c1.x, c1.y, c1.z);
+                builder.addVertex(c2.x, c2.y, c2.z);
+                builder.addVertex(c0.x, c0.y, c0.z);
+                builder.addVertex(c2.x, c2.y, c2.z);
+                builder.addVertex(c3.x, c3.y, c3.z);
+            }
             meshData = builder.build();
             if (meshData == null) {
                 return;

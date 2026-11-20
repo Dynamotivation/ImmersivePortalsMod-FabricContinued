@@ -88,16 +88,21 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
     }
     
     @Override
-    public void ip_updateLightmapNow() {
-        ((IELightmapRenderStateExtractor) lightmapRenderStateExtractor).ip_setNeedsUpdate(true);
-        net.minecraft.client.renderer.state.LightmapRenderState state = gameRenderState().lightmapRenderState;
+    public void ip_renderLightmap(Lightmap destLightmap, net.minecraft.client.renderer.state.LightmapRenderState state) {
+        IELightmapRenderStateExtractor access = (IELightmapRenderStateExtractor) lightmapRenderStateExtractor;
+        access.ip_setNeedsUpdate(true);
         lightmapRenderStateExtractor.extract(state, 1.0F);
-        lightmap.render(state);
-        ((IELightmapRenderStateExtractor) lightmapRenderStateExtractor).ip_setNeedsUpdate(true);
+        destLightmap.render(state);
+        // the extraction consumed the flag, the main view must still update its own lightmap this frame
+        access.ip_setNeedsUpdate(true);
     }
     
-    @Override
-    public void ip_markLightmapDirty() {
-        ((IELightmapRenderStateExtractor) lightmapRenderStateExtractor).ip_setNeedsUpdate(true);
+    // sample the lightmap of the dimension that is being rendered into a portal view
+    @Inject(method = "lightmap", at = @At("HEAD"), cancellable = true)
+    private void ip_overrideLightmap(CallbackInfoReturnable<com.mojang.blaze3d.textures.GpuTextureView> cir) {
+        com.mojang.blaze3d.textures.GpuTextureView override = PortalViewRenderer.getActiveLightmapOverride();
+        if (override != null) {
+            cir.setReturnValue(override);
+        }
     }
 }

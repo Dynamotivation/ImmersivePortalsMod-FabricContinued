@@ -13,13 +13,10 @@ public interface IEGameRendererPortal {
     GpuBufferSlice ip_getPortalProjectionBuffer(Matrix4f projectionMatrix);
     
     /**
-     * Re-extracts and renders the lightmap for the level and camera that are currently active
-     * (used while rendering a portal destination).
+     * Extracts the lightmap state for the currently active level/camera into {@code state} and renders it
+     * into {@code lightmap} (a per-dimension lightmap used by portal views).
+     * Must be called at most once per frame per Lightmap object.
      */
-    void ip_updateLightmapNow();
-    
-    /**
-     * Makes the next main extraction rebuild the lightmap (after it was overwritten by a portal view).
-     */
-    void ip_markLightmapDirty();
+    void ip_renderLightmap(net.minecraft.client.renderer.Lightmap lightmap,
+                           net.minecraft.client.renderer.state.LightmapRenderState state);
 }

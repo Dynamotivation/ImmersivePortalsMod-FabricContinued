@@ -83,6 +83,19 @@ public class PortalViewRenderer {
     private static final boolean DUMP_VIEWS = System.getProperty("ip.dumpviews") != null;
     private static int dumpCounter = 0;
     private static String lastFogColor = "?";
+    
+    // one Lightmap per dimension (Lightmap.render can only be called once per frame per object)
+    private static final java.util.Map<net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level>, net.minecraft.client.renderer.Lightmap>
+        lightmaps = new java.util.HashMap<>();
+    private static final java.util.Map<net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level>, net.minecraft.client.renderer.state.LightmapRenderState>
+        lightmapStates = new java.util.HashMap<>();
+    private static final java.util.Map<net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level>, Long> lightmapFrame = new java.util.HashMap<>();
+    private static long frameCounter = 0;
+    private static com.mojang.blaze3d.textures.GpuTextureView activeLightmap = null;
+    
+    public static com.mojang.blaze3d.textures.GpuTextureView getActiveLightmapOverride() {
+        return activeLightmap;
+    }
 
     public static final RenderPipeline PORTAL_VIEW_PIPELINE = RenderPipeline.builder(
             net.minecraft.client.renderer.RenderPipelines.GLOBALS_SNIPPET
@@ -131,6 +144,10 @@ public class PortalViewRenderer {
 
     public static void cleanUp() {
         endFrame();
+        lightmaps.values().forEach(net.minecraft.client.renderer.Lightmap::close);
+        lightmaps.clear();
+        lightmapStates.clear();
+        lightmapFrame.clear();
         for (TextureTarget target : targetPool) {
             target.destroyBuffers();
         }
@@ -170,6 +187,7 @@ public class PortalViewRenderer {
      */
     public static void onBeforeExtract(GameRenderer gameRenderer, DeltaTracker deltaTracker) {
         endFrame();
+        frameCounter++;
 
         if (isRenderingViews || client.level == null || client.player == null) {
             return;
@@ -215,6 +233,7 @@ public class PortalViewRenderer {
         finally {
             isRenderingViews = false;
             activeTarget = null;
+            activeLightmap = null;
         }
     }
 
@@ -326,6 +345,7 @@ public class PortalViewRenderer {
                 finally {
                     portalCamera.ip_endPortalOverride();
                     activeTarget = null;
+                    activeLightmap = null;
                 }
             });
 
@@ -386,13 +406,21 @@ public class PortalViewRenderer {
         );
 
         lastFogColor = cameraState.fogData.color.toString();
-        // TODO(26.2): destination lightmap. Lightmap.render() uses a small ring buffer that cannot be written
-        // several times per frame (it crashed with several portal views), so it needs a separate Lightmap per dimension.
+        // the lightmap of the destination dimension: one Lightmap object per dimension, rendered once per frame
+        // (the camera already has the destination's environment attributes now)
+        net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> destDim = destWorld.dimension();
+        net.minecraft.client.renderer.Lightmap destLightmap =
+            lightmaps.computeIfAbsent(destDim, k -> new net.minecraft.client.renderer.Lightmap());
+        if (lightmapFrame.getOrDefault(destDim, -1L) != frameCounter) {
+            lightmapFrame.put(destDim, frameCounter);
+            ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_renderLightmap(
+                destLightmap,
+                lightmapStates.computeIfAbsent(destDim, k -> new net.minecraft.client.renderer.state.LightmapRenderState())
+            );
+        }
+        activeLightmap = destLightmap.getTextureView();
         destExtractor.extract(deltaTracker, camera, partialTick);
 
-        // no clouds in portal views for now (they were drawn wrongly, see PORTING.md)
-        gameRenderer.gameRenderState().levelRenderState.cloudColor = 0;
-        
         // the extraction may have updated the camera state
         cameraState = gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
         cameraState.viewRotationMatrix.set(viewMatrix);

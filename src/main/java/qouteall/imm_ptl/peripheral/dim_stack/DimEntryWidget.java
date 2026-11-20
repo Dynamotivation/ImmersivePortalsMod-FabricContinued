@@ -24,11 +24,75 @@ import java.util.function.Consumer;
 
 // extending EntryListWidget.Entry is also fine
 public class DimEntryWidget extends ContainerObjectSelectionList.Entry<DimEntryWidget> {
-    // TODO(26.2): dimension entry rendering needs porting to GuiGraphicsExtractor
     @Override
     public void extractContent(
         net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float a
     ) {
+        Minecraft client = Minecraft.getInstance();
+        int x = getContentX();
+        int y = getContentY();
+        int rowWidth = getWidth();
+        
+        graphics.text(
+            client.font, dimensionName.getString(),
+            x + widgetHeight + 3, y,
+            0xFFFFFFFF
+        );
+        
+        graphics.text(
+            client.font, dimension.identifier().toString(),
+            x + widgetHeight + 3, y + 10,
+            0xFF999999
+        );
+        
+        if (dimIconPath != null) {
+            int iconLen = widgetHeight - 4;
+            
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(x, y);
+            
+            if (entry != null && entry.flipped) {
+                graphics.pose().rotateAbout((float) Math.PI, iconLen / 2.0f, iconLen / 2.0f);
+            }
+            
+            graphics.blit(
+                net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                dimIconPath, 0, 0, 0.0F, 0.0F,
+                iconLen, iconLen,
+                iconLen, iconLen
+            );
+            
+            graphics.pose().popMatrix();
+        }
+        
+        if (entry != null) {
+            graphics.text(client.font, getText1(), x + widgetHeight + 3, y + 20, 0xFF999999);
+            graphics.text(client.font, getText2(), x + widgetHeight + 3, y + 30, 0xFF999999);
+            
+            if (arrowToPrevious != ArrowType.none) {
+                graphics.pose().pushMatrix();
+                graphics.pose().translate(x + rowWidth - 13, y);
+                graphics.pose().scale(1.5f, 1.5f);
+                graphics.text(
+                    client.font, Component.literal("↑"),
+                    0, 0,
+                    arrowToPrevious == ArrowType.enabled ? 0xFF999999 : 0xFFFF0000
+                );
+                graphics.pose().popMatrix();
+            }
+            
+            if (arrowToNext != ArrowType.none) {
+                graphics.pose().pushMatrix();
+                graphics.pose().translate(x + rowWidth - 13, y + widgetHeight - 14.5f);
+                graphics.pose().scale(1.5f, 1.5f);
+                graphics.text(
+                    client.font, Component.literal("↓"),
+                    0, 0,
+                    arrowToNext == ArrowType.enabled ? 0xFF999999 : 0xFFFF0000
+                );
+                graphics.pose().popMatrix();
+            }
+        }
     }
     
     private static final Logger LOGGER = LogUtils.getLogger();

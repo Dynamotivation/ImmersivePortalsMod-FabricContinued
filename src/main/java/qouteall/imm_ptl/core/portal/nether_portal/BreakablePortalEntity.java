@@ -8,6 +8,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.Util;
 import net.minecraft.core.BlockPos;
+import qouteall.imm_ptl.core.platform_specific.O_O;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
@@ -208,9 +209,32 @@ public abstract class BreakablePortalEntity extends Portal {
     
     // break the partner immediately instead of only flagging it: a flag is only handled in the partner's own tick,
     // which does not happen when the partner's chunk is only loaded for portal rendering
-    private static void breakReverse(BreakablePortalEntity reversePortal) {
+    private void breakReverse(BreakablePortalEntity reversePortal) {
+        syncBrokenFrameBlocks(reversePortal);
         reversePortal.shouldBreakPortal = true;
         reversePortal.breakPortalOnThisSide();
+    }
+    
+    // A frame block that was mined on this side is also broken on the other side, so the same border block does not
+    // have to be mined twice. The matching block is found by transforming the block centre through the portal.
+    private void syncBrokenFrameBlocks(BreakablePortalEntity reversePortal) {
+        if (blockPortalShape == null || reversePortal.blockPortalShape == null || level().isClientSide()) {
+            return;
+        }
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel) || !(reversePortal.level() instanceof net.minecraft.server.level.ServerLevel otherLevel)) {
+            return;
+        }
+        for (BlockPos pos : blockPortalShape.frameAreaWithoutCorner) {
+            if (O_O.isObsidian(level().getBlockState(pos))) {
+                continue;
+            }
+            BlockPos other = BlockPos.containing(transformPoint(net.minecraft.world.phys.Vec3.atCenterOf(pos)));
+            if (reversePortal.blockPortalShape.frameAreaWithoutCorner.contains(other)
+                && O_O.isObsidian(otherLevel.getBlockState(other))
+            ) {
+                otherLevel.destroyBlock(other, true);
+            }
+        }
     }
     
     @Override

@@ -153,8 +153,33 @@ public abstract class BreakablePortalEntity extends Portal {
         Helper.log("Broke " + this);
     }
     
+    private boolean integrityCheckScheduled = false;
+    
     public void notifyPlaceholderUpdate() {
         isNotified = true;
+        
+        // The check normally runs in the entity tick, but a portal in a dimension the player only looks into (through
+        // a portal) may not be ticking. So run it from the server task list, after the current block update finished.
+        if (level().isClientSide() || unbreakable || isRemoved() || integrityCheckScheduled) {
+            return;
+        }
+        integrityCheckScheduled = true;
+        ServerTaskList.of(level().getServer()).addTask(MyTaskList.withRetryNumberLimit(
+            1,
+            () -> {
+                integrityCheckScheduled = false;
+                if (isRemoved()) {
+                    return true;
+                }
+                isNotified = false;
+                checkPortalIntegrity();
+                if (shouldBreakPortal) {
+                    breakPortalOnThisSide();
+                }
+                return true;
+            },
+            () -> integrityCheckScheduled = false
+        ));
     }
     
     private BreakablePortalEntity getReversePortal() {

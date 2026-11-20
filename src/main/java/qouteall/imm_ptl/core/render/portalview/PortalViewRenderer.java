@@ -173,6 +173,8 @@ public class PortalViewRenderer {
         public final TextureTarget target;
         // the destination has its terrain built, so the view can be revealed
         public boolean ready = false;
+        // rendered with a flipped x axis (mirror), see renderPortalView
+        public boolean flipped = false;
 
         PortalView(Portal portal, TextureTarget target) {
             this.portal = portal;
@@ -642,6 +644,14 @@ public class PortalViewRenderer {
         Matrix4f viewRotInverse = viewA.invert(new Matrix4f());
         projection.mul(viewRotInverse); // projection = (P * V) * V^-1
 
+        // A mirror (or any flipping transformation) reverses the triangle winding of the destination render, so
+        // everything would be culled inside-out. Flip x in clip space to restore the winding, and flip back when the
+        // view is composited (portal_view.fsh, signalled by a negative ColorModulator.r).
+        boolean mirrored = viewB.determinant() < 0;
+        if (mirrored) {
+            projection.set(new Matrix4f().scaling(-1.0f, 1.0f, 1.0f).mul(projection));
+        }
+
         // the clip plane: the portal's destination plane, only things behind it (in the content direction) are kept
         Vec3 contentDir = portal.getContentDirection();
         Vec3 planePoint = portal.getDestPos().subtract(newCameraPos);
@@ -701,6 +711,7 @@ public class PortalViewRenderer {
 
         PortalView portalView = new PortalView(portal, target);
         portalView.ready = destRenderer.hasRenderedAllSections();
+        portalView.flipped = mirrored;
         views.add(portalView);
         
         if (DUMP_VIEWS) {
@@ -997,7 +1008,7 @@ public class PortalViewRenderer {
                 GpuBuffer indexBuffer = indices.getBuffer(vertexCount);
 
                 GpuBufferSlice dynamicTransform = RenderSystem.getDynamicUniforms().writeTransform(
-                    viewRotation, new Vector4f(1, 1, 1, 1), new Vector3f(), new Matrix4f()
+                    viewRotation, new Vector4f(view.flipped ? -1 : 1, 1, 1, 1), new Vector3f(), new Matrix4f()
                 );
 
                 try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(

@@ -68,6 +68,12 @@ public class IPModEntryClient implements ClientModInitializer {
         
         initPortalRenderers();
         
+        // multi-line text overlay (wand hints, command output), replaces MixinGui_Overlay
+        net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
+            net.minecraft.resources.Identifier.fromNamespaceAndPath("immersive_portals", "custom_text_overlay"),
+            qouteall.q_misc_util.CustomTextOverlay::render
+        );
+
         // 26.x: the debug screen is made of registered entries (replaces MixinDebugScreenOverlay)
         net.minecraft.client.gui.components.debug.DebugScreenEntries.register(
             net.minecraft.resources.Identifier.fromNamespaceAndPath("immersive_portals", "portal_debug"),

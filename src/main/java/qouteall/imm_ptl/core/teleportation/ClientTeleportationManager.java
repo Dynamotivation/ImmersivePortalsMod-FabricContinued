@@ -483,8 +483,6 @@ public class ClientTeleportationManager {
         toWorld.addEntity(player);
         ((IEAbstractClientPlayer) player).ip_setClientLevel(toWorld);
         
-        // TODO(port): 26.x replaced the lightmap texture with a lightmap render state,
-        //  so the per-dimension lightmap swap is deferred with the renderer redesign.
         
         client.level = toWorld;
         ((IEMinecraftClient) client).ip_setWorldRenderer(

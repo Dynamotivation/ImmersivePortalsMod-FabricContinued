@@ -1,4 +1,4 @@
-7.0.0-alpha1 (unofficial port to Minecraft 26.2, Fabric)
+26.2.0-alpha.1 (unofficial port to Minecraft 26.2, Fabric)
 
 - Rewrote portal rendering for the 26.2 renderer (Blaze3D): every visible portal is rendered into an offscreen target by the destination dimension's own LevelRenderer, with an oblique clipping projection, and composited into the main view. Works with Sodium 0.9 and Iris 1.11 loaded.
 - Each dimension has its own level, level renderer, level extractor and particle engine; remote dimensions keep ticking (entities, block entities, particles, ambient effects).

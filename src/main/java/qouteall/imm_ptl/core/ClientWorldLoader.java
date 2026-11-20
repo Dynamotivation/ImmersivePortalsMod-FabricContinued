@@ -5,12 +5,15 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.event.Event;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.extract.LevelExtractor;
+import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
@@ -67,6 +70,9 @@ public class ClientWorldLoader {
         new Object2ObjectOpenHashMap<>();
     public static final Map<ResourceKey<Level>, LevelRenderer> WORLD_RENDERER_MAP =
         new Object2ObjectOpenHashMap<>();
+    // 26.x: each ClientLevel is bound to a LevelExtractor (which feeds the LevelRenderer of the same dimension)
+    public static final Map<ResourceKey<Level>, LevelExtractor> WORLD_EXTRACTOR_MAP =
+        new Object2ObjectOpenHashMap<>();
     public static final Map<ResourceKey<Level>, DimensionRenderHelper> RENDER_HELPER_MAP =
         new Object2ObjectOpenHashMap<>();
     
@@ -110,6 +116,19 @@ public class ClientWorldLoader {
     }
     
     public static void tick() {
+        if (IPCGlobal.isClientRemoteTickingEnabled) {
+            isClientRemoteTicking = true;
+            CLIENT_WORLD_MAP.values().forEach(world -> {
+                if (CLIENT.level != world) {
+                    tickRemoteWorld(world);
+                }
+            });
+            isClientRemoteTicking = false;
+        }
+
+        for (DimensionRenderHelper helper : RENDER_HELPER_MAP.values()) {
+            helper.tick();
+        }
     }
     
     public static void disposeRenderHelpers() {
@@ -164,6 +183,11 @@ public class ClientWorldLoader {
     }
     
     private static void disposeWorldRenderer(LevelRenderer worldRenderer) {
+        if (worldRenderer == CLIENT.levelRenderer) {
+            // the main renderer is owned and closed by Minecraft
+            return;
+        }
+        worldRenderer.close();
     }
     
     private static void disposeDimensionDynamically(ResourceKey<Level> dimension) {
@@ -312,6 +336,7 @@ public class ClientWorldLoader {
             ResourceKey<Level> playerDimension = CLIENT.level.dimension();
             CLIENT_WORLD_MAP.put(playerDimension, CLIENT.level);
             WORLD_RENDERER_MAP.put(playerDimension, CLIENT.levelRenderer);
+            WORLD_EXTRACTOR_MAP.put(playerDimension, CLIENT.levelExtractor);
             RENDER_HELPER_MAP.put(
                 CLIENT.level.dimension(),
                 new DimensionRenderHelper(CLIENT.level)
@@ -323,9 +348,119 @@ public class ClientWorldLoader {
     
     @SuppressWarnings("DataFlowIssue")
     private static ClientLevel createSecondaryClientWorld(ResourceKey<Level> dimension) {
-        return null;
+        Validate.notNull(CLIENT.player, "player is null");
+        Validate.isTrue(CLIENT.isSameThread(), "not on client thread");
+
+        Set<ResourceKey<Level>> dimIds = getServerDimensions();
+        if (!dimIds.contains(dimension)) {
+            throw new RuntimeException("Cannot create invalid client dimension " + dimension.identifier());
+        }
+
+        isCreatingClientWorld = true;
+
+        Profiler.get().push("create_world");
+
+        int chunkLoadDistance = 3; // my own chunk manager doesn't need it
+
+        ClientLevel newWorld;
+        try {
+            // each dimension has its own LevelRenderer + LevelExtractor
+            // (they share the entity/block entity dispatchers, the models and the render states)
+            LevelRenderer mainRenderer = CLIENT.levelRenderer;
+            RenderTarget mainTarget = CLIENT.gameRenderer.mainRenderTarget();
+            LevelRenderer worldRenderer = new LevelRenderer(
+                mainRenderer.entityRenderDispatcher(),
+                mainRenderer.blockEntityRenderDispatcher(),
+                CLIENT.getModelManager(),
+                CLIENT.getTextureManager(),
+                CLIENT.getAtlasManager(),
+                CLIENT.getShaderManager(),
+                CLIENT.gameRenderer,
+                mainTarget.width,
+                mainTarget.height
+            );
+            LevelExtractor worldExtractor = new LevelExtractor(
+                CLIENT, CLIENT.gameRenderer.gameRenderState().levelRenderState, worldRenderer
+            );
+
+            ClientPacketListener mainNetHandler = CLIENT.player.connection;
+            assert CLIENT.level != null;
+            Map<MapId, MapItemSavedData> mapData = ((IEClientLevel_Accessor) CLIENT.level).ip_getMapData();
+
+            Validate.notNull(
+                dimIdToDimTypeId, "dimension type mapping is missing"
+            );
+            ResourceKey<DimensionType> dimensionTypeKey = dimIdToDimTypeId.get(dimension);
+
+            if (dimensionTypeKey == null) {
+                throw new IllegalStateException(
+                    "Cannot find dimension type for %s in %s"
+                        .formatted(dimension.identifier(), dimIdToDimTypeId)
+                );
+            }
+
+            ClientLevel.ClientLevelData currentProperty =
+                (ClientLevel.ClientLevelData) ((IEWorld) CLIENT.level).ip_getLevelData();
+            RegistryAccess registryManager = mainNetHandler.registryAccess();
+            int simulationDistance = CLIENT.level.getServerSimulationDistance();
+
+            Holder<DimensionType> dimensionType = registryManager
+                .lookupOrThrow(Registries.DIMENSION_TYPE)
+                .getOrThrow(dimensionTypeKey);
+
+            // currently use a separated level data object
+            // day time is not shared between worlds
+            ClientLevel.ClientLevelData properties = new ClientLevel.ClientLevelData(
+                currentProperty.getDifficulty(),
+                currentProperty.isHardcore(),
+                ((IEClientLevelData) currentProperty).ip_getIsFlat()
+            );
+            newWorld = new ClientLevel(
+                mainNetHandler,
+                properties,
+                dimension,
+                dimensionType,
+                chunkLoadDistance,
+                simulationDistance,// seems that client world does not use this
+                worldExtractor,
+                CLIENT.level.isDebug(),
+                CLIENT.level.getBiomeManager().biomeZoomSeed,
+                CLIENT.level.getSeaLevel()
+            );
+
+            // all worlds share the same map data map
+            ((IEClientLevel_Accessor) newWorld).ip_setMapData(mapData);
+
+            // all worlds share the same tick rate manager
+            ((IEClientWorld) newWorld).ip_setTickRateManager(CLIENT.level.tickRateManager());
+
+            worldExtractor.setLevel(newWorld);
+
+            worldExtractor.onResourceManagerReload(CLIENT.getResourceManager());
+            // TODO(26.2): the CloudRenderer of secondary renderers is not reloaded (no clouds in portal views)
+
+            CLIENT_WORLD_MAP.put(dimension, newWorld);
+            WORLD_RENDERER_MAP.put(dimension, worldRenderer);
+            WORLD_EXTRACTOR_MAP.put(dimension, worldExtractor);
+
+            LOGGER.info("Client World Created {}", dimension.identifier());
+        }
+        catch (Exception e) {
+            throw new IllegalStateException(
+                "Creating Client World " + dimension.identifier() + " " + CLIENT_WORLD_MAP.keySet(),
+                e
+            );
+        }
+        finally {
+            isCreatingClientWorld = false;
+            Profiler.get().pop();
+        }
+
+        CLIENT_WORLD_LOAD_EVENT.invoker().accept(newWorld);
+
+        return newWorld;
     }
-    
+
     public static Set<ResourceKey<Level>> getServerDimensions() {
         assert CLIENT.player != null;
         return CLIENT.player.connection.levels();

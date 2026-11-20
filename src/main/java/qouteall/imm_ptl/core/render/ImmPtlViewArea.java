@@ -63,31 +63,8 @@ public class ImmPtlViewArea extends ViewArea {
     private boolean isAlive = true;
     
     public static void init() {
-        ImmPtlClientChunkMap.clientChunkUnloadSignal.connect(section -> {
-            ResourceKey<Level> dimension = section.getLevel().dimension();
-            
-            LevelRenderer worldRenderer = ClientWorldLoader.WORLD_RENDERER_MAP.get(dimension);
-            
-            if (worldRenderer != null) {
-                ViewArea viewArea = ((IEWorldRenderer) worldRenderer).ip_getBuiltChunkStorage();
-                if (viewArea instanceof ImmPtlViewArea immPtlViewArea) {
-                    immPtlViewArea.onChunkUnload(section.getPos().x(), section.getPos().z());
-                }
-            }
-        });
-        
-        IPGlobal.POST_CLIENT_TICK_EVENT.register(() -> {
-            if (ClientWorldLoader.getIsInitialized()) {
-                for (ClientLevel world : ClientWorldLoader.getClientWorlds()) {
-                    LevelRenderer worldRenderer =
-                        ClientWorldLoader.getWorldRenderer(world.dimension());
-                    ViewArea viewArea = ((IEWorldRenderer) worldRenderer).ip_getBuiltChunkStorage();
-                    if (viewArea instanceof ImmPtlViewArea immPtlViewArea) {
-                        immPtlViewArea.tick();
-                    }
-                }
-            }
-        });
+        // TODO(26.2): the portal-aware section storage (column presets for remote dimensions) is not ported.
+        // Each dimension's LevelRenderer uses the vanilla ViewArea instead.
     }
     
     public ImmPtlViewArea(

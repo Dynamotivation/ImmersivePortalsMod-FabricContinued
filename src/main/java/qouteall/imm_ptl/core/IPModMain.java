@@ -95,6 +95,7 @@ public class IPModMain {
         ServerPerformanceMonitor.init();
         
         ImmPtlChunkTickets.init();
+        qouteall.imm_ptl.core.chunk_loading.PortalSimulationTickets.init();
         
         IPPortingLibCompat.init();
         

@@ -28,6 +28,7 @@ import qouteall.imm_ptl.core.IPPerServerInfo;
 import qouteall.imm_ptl.core.McHelper;
 import qouteall.imm_ptl.core.ScaleUtils;
 import qouteall.imm_ptl.core.chunk_loading.ImmPtlChunkTracking;
+import qouteall.imm_ptl.core.chunk_loading.PortalSimulationTickets;
 import qouteall.imm_ptl.core.collision.PortalCollisionHandler;
 import qouteall.imm_ptl.core.compat.GravityChangerInterface;
 import qouteall.imm_ptl.core.ducks.IEEntity;
@@ -547,7 +548,10 @@ public class ServerTeleportationManager {
         TeleportationUtil.transformEntityVelocity(
             portal, entity, TeleportationUtil.PortalPointVelocity.ZERO, oldPos
         );
-        
+
+        // rotate the facing too (velocity is already rotated), copied into the recreated entity by restoreFrom
+        transformRegularEntityRotation(entity, portal);
+
         if (portal.getDestDim() != entity.level().dimension()) {
             entity = changeEntityDimension(entity, portal.getDestDim(), newEyePos, true);
             
@@ -577,11 +581,39 @@ public class ServerTeleportationManager {
         );
         
         portal.onEntityTeleportedOnServer(entity);
-        
+
         ScaleUtils.onServerEntityTeleported(entity, portal);
-        
+
+        // keep the arrival area simulated for a while, even when no player is in that dimension
+        // (otherwise the entity freezes until a player enters, see PortalSimulationTickets)
+        PortalSimulationTickets.onEntityTeleported(entity, portal);
+
         // a new entity may be created
         this.lastTeleportGameTime.put(entity, currGameTime);
+    }
+
+    private static void transformRegularEntityRotation(Entity entity, Portal portal) {
+        if (portal.getRotation() == null) {
+            return;
+        }
+        // projectiles derive their rotation from the (already transformed) velocity, with their own yaw convention
+        if (entity instanceof Projectile) {
+            return;
+        }
+        float oldYaw = entity.getYRot();
+        Vec3 newLook = portal.transformLocalVecNonScale(Vec3.directionFromRotation(entity.getXRot(), oldYaw));
+        float newYaw = (float) (Math.atan2(-newLook.x, newLook.z) * (180.0 / Math.PI));
+        float newPitch = (float) (Math.asin(Math.max(-1, Math.min(1, -newLook.y))) * (180.0 / Math.PI));
+        float yawDelta = newYaw - oldYaw;
+        entity.setYRot(newYaw);
+        entity.setXRot(newPitch);
+        entity.yRotO = newYaw;
+        entity.xRotO = newPitch;
+        entity.setYHeadRot(entity.getYHeadRot() + yawDelta);
+        if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+            living.yBodyRot += yawDelta;
+            living.yBodyRotO = living.yBodyRot;
+        }
     }
     
     private static Vec3 getRegularEntityTeleportedEyePos(Entity entity, Portal portal) {

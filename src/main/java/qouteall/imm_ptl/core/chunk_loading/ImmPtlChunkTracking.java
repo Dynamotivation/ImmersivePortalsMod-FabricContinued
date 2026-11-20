@@ -172,7 +172,10 @@ public class ImmPtlChunkTracking {
         );
         
         chunkLoaders.addAll(playerInfo.additionalChunkLoaders);
-        
+
+        // the loading tickets above do not simulate; make the area around nearby portal destinations entity ticking
+        PortalSimulationTickets.updateForPlayer(player);
+
         MinecraftServer server = player.level().getServer();
         
         for (ChunkLoader chunkLoader : chunkLoaders) {

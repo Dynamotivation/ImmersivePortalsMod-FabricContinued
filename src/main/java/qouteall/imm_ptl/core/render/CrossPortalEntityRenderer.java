@@ -3,230 +3,326 @@ package qouteall.imm_ptl.core.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.state.level.LevelRenderState;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.apache.commons.lang3.Validate;
-import org.joml.Matrix4f;
-import qouteall.imm_ptl.core.CHelper;
+import org.joml.Quaternionf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import qouteall.imm_ptl.core.ClientWorldLoader;
 import qouteall.imm_ptl.core.IPCGlobal;
 import qouteall.imm_ptl.core.IPGlobal;
-import qouteall.imm_ptl.core.McHelper;
 import qouteall.imm_ptl.core.collision.PortalCollisionEntry;
 import qouteall.imm_ptl.core.collision.PortalCollisionHandler;
 import qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface;
 import qouteall.imm_ptl.core.ducks.IEEntity;
-import qouteall.imm_ptl.core.ducks.IEWorldRenderer;
+import qouteall.imm_ptl.core.ducks.IEEntityRenderState;
 import qouteall.imm_ptl.core.portal.Mirror;
 import qouteall.imm_ptl.core.portal.Portal;
-import qouteall.imm_ptl.core.portal.PortalManipulation;
-import qouteall.imm_ptl.core.render.context_management.PortalRendering;
-import qouteall.imm_ptl.core.render.context_management.RenderStates;
-import qouteall.imm_ptl.core.render.context_management.WorldRenderInfo;
-import qouteall.imm_ptl.core.render.renderer.PortalRenderer;
-import qouteall.q_misc_util.Helper;
-import qouteall.q_misc_util.my_util.Plane;
+import qouteall.q_misc_util.my_util.DQuaternion;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Set;
 import java.util.WeakHashMap;
 
+/**
+ * Entities that are partly through a portal (26.2 extract/render split).
+ * <p>
+ * The part of an entity that went through a portal must appear on the other side. Whenever a LevelExtractor extracts
+ * the entities of a level (main view, portal views, nested views: {@code MixinLevelExtractor_CrossPortal}), every
+ * entity (of any client level) that collides with a portal leading INTO that level and is partly behind the portal
+ * plane gets an extra EntityRenderState: the entity's normal render state (interpolated pose of its own level),
+ * moved to the transformed position, lit by the destination level, without shadow/leash, and with the portal's
+ * rotation and scale applied around the entity anchor when it is submitted ({@code MixinEntityRenderDispatcher_CrossPortal}).
+ * <ul>
+ * <li>Seen through the portal: the projection is in the destination view, the oblique clip plane of the view keeps
+ * only the part past the portal plane; the part still in front is drawn normally in the main view.</li>
+ * <li>Reverse: an entity of the destination going through the reverse portal gets a projection in the main view; the
+ * part that is not through yet is behind the pane, which covers it.</li>
+ * </ul>
+ * The source entity is never modified, nothing is extracted twice in one view (one projection per entity per
+ * extraction). Mirrors are skipped (not passable). Disabled with an active shader pack and by the config option
+ * correctCrossPortalEntityRendering. Any error disables the feature for the session (logged once).
+ * Known limit: the main view cannot clip, so the projection's part that is not through yet can be seen from behind
+ * the frame (the same holds for the real entity's part that is already through).
+ */
 @Environment(EnvType.CLIENT)
 public class CrossPortalEntityRenderer {
-    private static final Minecraft client = Minecraft.getInstance();
-    
-    //there is no weak hash set
+    private static final Logger LOGGER = LoggerFactory.getLogger(CrossPortalEntityRenderer.class);
+
+    // there is no weak hash set
     private static final WeakHashMap<Entity, Object> collidedEntities = new WeakHashMap<>();
-    
-    public static boolean isRenderingEntityNormally = false;
-    
-    public static boolean isRenderingEntityProjection = false;
-    
+
+    private static boolean disabled = false;
+
     public static void init() {
         IPGlobal.POST_CLIENT_TICK_EVENT.register(CrossPortalEntityRenderer::onClientTick);
-        
+
         IPCGlobal.CLIENT_CLEANUP_EVENT.register(CrossPortalEntityRenderer::cleanUp);
-        
+
         ClientWorldLoader.CLIENT_DIMENSION_DYNAMIC_REMOVE_EVENT.register(dim -> cleanUp());
     }
-    
+
     private static void cleanUp() {
         collidedEntities.clear();
     }
-    
+
     private static void onClientTick() {
-        collidedEntities.entrySet().removeIf(entry -> {
-            Entity entity = entry.getKey();
-            return entity.isRemoved() || !((IEEntity) entity).ip_isCollidingWithPortal();
-        });
+        try {
+            collidedEntities.entrySet().removeIf(entry -> {
+                Entity entity = entry.getKey();
+                return entity == null || entity.isRemoved() || !((IEEntity) entity).ip_isCollidingWithPortal();
+            });
+        }
+        catch (Throwable e) {
+            disable(e);
+            collidedEntities.clear();
+        }
     }
-    
+
     public static void onEntityTickClient(Entity entity) {
-        if (entity instanceof Portal) {
+        if (disabled || entity instanceof Portal) {
             return;
         }
-        
+
         if (((IEEntity) entity).ip_isCollidingWithPortal()) {
             collidedEntities.put(entity, null);
         }
     }
-    
-    public static void onBeginRenderingEntitiesAndBlockEntities(Matrix4f modelView) {
-        isRenderingEntityNormally = true;
-        
-        if (PortalRendering.isRendering()) {
-            FrontClipping.setupInnerClipping(
-                PortalRendering.getActiveClippingPlane(),
-                modelView, 0
-            );
+
+    private static void disable(Throwable e) {
+        if (!disabled) {
+            disabled = true;
+            LOGGER.error("Cross-portal entity rendering failed and is disabled for this session", e);
         }
     }
-    
-    private static boolean isCrossPortalRenderingEnabled() {
-        if (IrisInterface.invoker.isIrisPresent()) {
+
+    private static boolean isEnabled() {
+        if (disabled || !IPGlobal.correctCrossPortalEntityRendering) {
             return false;
         }
-        return IPGlobal.correctCrossPortalEntityRendering;
+        try {
+            // shader packs: the views are clipped by the pack's programs, keep it simple and off
+            return !IrisInterface.invoker.isShaders();
+        }
+        catch (Throwable e) {
+            return false;
+        }
     }
-    
-    public static void onEndRenderingEntitiesAndBlockEntities(PoseStack matrixStack) {
-        isRenderingEntityNormally = false;
-        
-        FrontClipping.disableClipping();
-        
-        if (!isCrossPortalRenderingEnabled()) {
+
+    /**
+     * Called at the end of LevelExtractor.extractVisibleEntities for every view.
+     *
+     * @param level the level being extracted (the destination of the projected entities)
+     */
+    public static void extractProjections(
+        ClientLevel level, Camera camera, Frustum frustum, DeltaTracker deltaTracker,
+        EntityRenderDispatcher dispatcher, LevelRenderState output
+    ) {
+        if (collidedEntities.isEmpty() || !isEnabled()) {
             return;
         }
-        
-        renderEntityProjections(matrixStack);
-    }
-    
-    public static void beforeRenderingEntity(Entity entity, PoseStack matrixStack) {
-    }
-    
-    public static void afterRenderingEntity(Entity entity) {
-    }
-    
-    //if an entity is in overworld but halfway through a nether portal
-    //then it has a projection in nether
-    private static void renderEntityProjections(PoseStack matrixStack) {
-        if (!isCrossPortalRenderingEnabled()) {
-            return;
+        try {
+            extractProjectionsInner(level, camera, frustum, deltaTracker, dispatcher, output);
         }
-        
-        ResourceKey<Level> clientDim = client.level.dimension();
-        
-        for (Entity entity : collidedEntities.keySet()) {
+        catch (Throwable e) {
+            disable(e);
+        }
+        finally {
+            output.lastEntityRenderStateCount = output.entityRenderStates.size();
+        }
+    }
+
+    private static void extractProjectionsInner(
+        ClientLevel level, Camera camera, Frustum frustum, DeltaTracker deltaTracker,
+        EntityRenderDispatcher dispatcher, LevelRenderState output
+    ) {
+        ResourceKey<Level> dim = level.dimension();
+        Set<Entity> done = Collections.newSetFromMap(new IdentityHashMap<>());
+        List<Entity> entities = new ArrayList<>(collidedEntities.keySet());
+
+        for (Entity entity : entities) {
+            if (entity == null || entity.isRemoved() || entity instanceof Portal) {
+                continue;
+            }
             PortalCollisionHandler collisionHandler = ((IEEntity) entity).ip_getPortalCollisionHandler();
-            
-            if (collisionHandler != null) {
-                for (PortalCollisionEntry e : collisionHandler.portalCollisions) {
-                    Portal collidingPortal = e.portal;
-                    if (!(collidingPortal instanceof Mirror)) {
-                        ResourceKey<Level> projectionDimension = collidingPortal.getDestDim();
-                        if (clientDim == projectionDimension) {
-                            renderProjectedEntity(entity, collidingPortal, matrixStack);
-                        }
+            if (collisionHandler == null) {
+                continue;
+            }
+            float partialTick = getPartialTick(entity, deltaTracker);
+            for (PortalCollisionEntry collision : new ArrayList<>(collisionHandler.portalCollisions)) {
+                Portal portal = collision.portal;
+                if (!isProjectingPortal(portal, entity, dim)) {
+                    continue;
+                }
+                if (!isPartlyThrough(entity, portal, partialTick)) {
+                    continue;
+                }
+                addProjection(entity, portal, partialTick, level, camera, frustum, dispatcher, output, done);
+                // riders are not ticked as non-passengers (no collision tracking): project them with their vehicle
+                for (Entity passenger : entity.getIndirectPassengers()) {
+                    if (passenger != entity && !(passenger instanceof Portal)) {
+                        addProjection(
+                            passenger, portal, getPartialTick(passenger, deltaTracker),
+                            level, camera, frustum, dispatcher, output, done
+                        );
                     }
                 }
+                // one projection per entity and view
+                break;
             }
         }
     }
-    
-    public static boolean hasIntersection(
-        Vec3 outerPlanePos, Vec3 outerPlaneNormal,
-        Vec3 entityPos, Vec3 collidingPortalNormal
-    ) {
-        return entityPos.subtract(outerPlanePos).dot(outerPlaneNormal) > 0.01 &&
-            outerPlanePos.subtract(entityPos).dot(collidingPortalNormal) > 0.01;
+
+    private static float getPartialTick(Entity entity, DeltaTracker deltaTracker) {
+        return deltaTracker.getGameTimeDeltaPartialTick(!entity.level().tickRateManager().isEntityFrozen(entity));
     }
-    
-    private static void renderProjectedEntity(
-        Entity entity,
-        Portal collidingPortal,
-        PoseStack matrixStack
-    ) {
+
+    private static boolean isProjectingPortal(Portal portal, Entity entity, ResourceKey<Level> dim) {
+        return portal != null
+            && !(portal instanceof Mirror)
+            && !portal.isRemoved()
+            && portal.level() == entity.level()
+            && portal.getDestDim() == dim
+            && portal.isPortalValid();
     }
-    
-    private static void renderEntity(
-        Entity entity,
-        Portal transformingPortal,
-        PoseStack matrixStack
-    ) {
+
+    /**
+     * The entity (interpolated) has its anchor in front of the portal plane and some part behind it.
+     * The anchor test picks the right face of a two-sided frame (the back face also collides sometimes).
+     */
+    private static boolean isPartlyThrough(Entity entity, Portal portal, float partialTick) {
+        Vec3 pos = entity.getPosition(partialTick);
+        AABB box = entity.getBoundingBox().move(pos.subtract(entity.position()));
+        Vec3 center = box.getCenter();
+        if (portal.getDistanceToPlane(center) < 0) {
+            return false;
+        }
+        double minDistance = Double.MAX_VALUE;
+        for (int i = 0; i < 8; i++) {
+            Vec3 corner = new Vec3(
+                (i & 1) == 0 ? box.minX : box.maxX,
+                (i & 2) == 0 ? box.minY : box.maxY,
+                (i & 4) == 0 ? box.minZ : box.maxZ
+            );
+            minDistance = Math.min(minDistance, portal.getDistanceToPlane(corner));
+        }
+        return minDistance < 0;
     }
-    
-    private static void setupEntityProjectionRenderingTransformation(
-        Portal portal, PoseStack matrixStack,
-        Vec3 entityPos, Vec3 entityLastTickPos, Vec3 cameraPos
+
+    private static AABB transformBox(Portal portal, AABB box) {
+        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+        for (int i = 0; i < 8; i++) {
+            Vec3 corner = portal.transformPoint(new Vec3(
+                (i & 1) == 0 ? box.minX : box.maxX,
+                (i & 2) == 0 ? box.minY : box.maxY,
+                (i & 4) == 0 ? box.minZ : box.maxZ
+            ));
+            minX = Math.min(minX, corner.x);
+            minY = Math.min(minY, corner.y);
+            minZ = Math.min(minZ, corner.z);
+            maxX = Math.max(maxX, corner.x);
+            maxY = Math.max(maxY, corner.y);
+            maxZ = Math.max(maxZ, corner.z);
+        }
+        return new AABB(minX, minY, minZ, maxX, maxY, maxZ);
+    }
+
+    private static void addProjection(
+        Entity entity, Portal portal, float partialTick, ClientLevel level, Camera camera, Frustum frustum,
+        EntityRenderDispatcher dispatcher, LevelRenderState output, Set<Entity> done
     ) {
-        if (portal.getScaling() == 1.0 && portal.getRotation() == null) {
+        if (entity.isRemoved() || !done.add(entity)) {
             return;
         }
-        
-        Vec3 anchor = entityLastTickPos.lerp(entityPos, RenderStates.getPartialTick())
-            .subtract(cameraPos);
-        
-        matrixStack.translate(anchor.x, anchor.y, anchor.z);
-        
-        float scaling = (float) portal.getScaling();
-        matrixStack.scale(scaling, scaling, scaling);
-        
-        if (portal.getRotation() != null) {
-            matrixStack.mulPose(portal.getRotation().toMcQuaternion());
+        // first person: the virtual camera would be inside the projection's head
+        if (entity == camera.entity() && !camera.isDetached()) {
+            return;
         }
-        
-        matrixStack.translate(-anchor.x, -anchor.y, -anchor.z);
-    }
-    
-    public static boolean shouldRenderPlayerDefault() {
-        if (!IPGlobal.renderYourselfInPortal) {
-            return false;
+        // vanilla never renders another LocalPlayer than the camera entity
+        if (entity instanceof LocalPlayer && entity != camera.entity()) {
+            return;
         }
-        if (!WorldRenderInfo.isRendering()) {
-            return false;
+
+        Vec3 pos = entity.getPosition(partialTick);
+        AABB box = entity.getBoundingBox().move(pos.subtract(entity.position()));
+        if (box.hasNaN()) {
+            return;
         }
-        LocalPlayer player = client.player;
-        assert player != null;
-        
-        if (PortalRendering.isRendering()) {
-            Portal renderingPortal = PortalRendering.getRenderingPortal();
-            if (renderingPortal instanceof Mirror) {
-                // if the camera pos is too close to the mirror,
-                // it will show the inside of the player head.
-                // avoid rendering player in this case.
-                float width = player.getBbWidth();
-                if (renderingPortal.getDistanceToNearestPointInPortal(player.getEyePosition()) < width * 0.8) {
-                    return false;
-                }
-            }
+        if (!frustum.isVisible(transformBox(portal, box).inflate(0.5))) {
+            return;
         }
-        
-        if (client.level == player.level()) {
-            return true;
+
+        // the normal render state of the entity, with its interpolated pose in its own level
+        EntityRenderState state = dispatcher.extractEntity(entity, partialTick);
+
+        Vec3 newPos = portal.transformPoint(new Vec3(state.x, state.y, state.z));
+        state.x = newPos.x;
+        state.y = newPos.y;
+        state.z = newPos.z;
+        state.distanceToCameraSq = newPos.distanceToSqr(camera.position());
+        if (state.distanceToCameraSq > 64.0 * 64.0) {
+            state.nameTag = null;
+            state.scoreText = null;
         }
-        
-        return false;
-    }
-    
-    public static boolean shouldRenderEntityNow(Entity entity) {
-        return false;
-    }
-    
-    public static boolean shouldRenderPlayerNormally(Entity entity) {
-        return false;
-    }
-    
-    public static Vec3 getRenderingCameraPos(Entity entity) {
-        if (entity instanceof LocalPlayer) {
-            return RenderStates.originalPlayerPos.add(
-                McHelper.getEyeOffset(entity)
+        // shadows and leashes were computed in the source level
+        state.shadowPieces.clear();
+        state.shadowRadius = 0;
+        state.leashStates = null;
+        // lighting of the destination
+        BlockPos lightPos = BlockPos.containing(portal.transformPoint(entity.getLightProbePosition(partialTick)));
+        int blockLight = entity.isOnFire() ? 15 : level.getBrightness(LightLayer.BLOCK, lightPos);
+        int skyLight = level.getBrightness(LightLayer.SKY, lightPos);
+        state.lightCoords = LightCoordsUtil.pack(blockLight, skyLight);
+
+        DQuaternion rotation = portal.getRotation();
+        double scale = portal.getScaling();
+        if (rotation != null || scale != 1.0) {
+            ((IEEntityRenderState) state).ip_setCrossPortalTransform(
+                rotation == null ? null : rotation.toMcQuaternion(), (float) scale
             );
         }
-        return entity.getEyePosition(RenderStates.getPartialTick());
+
+        output.entityRenderStates.add(state);
+    }
+
+    /**
+     * Called in EntityRenderDispatcher.submit after the pose is moved to the entity anchor.
+     */
+    public static void applyProjectionTransform(EntityRenderState state, PoseStack poseStack) {
+        try {
+            IEEntityRenderState access = (IEEntityRenderState) state;
+            if (!access.ip_hasCrossPortalTransform()) {
+                return;
+            }
+            Quaternionf rotation = access.ip_getCrossPortalRotation();
+            if (rotation != null) {
+                poseStack.mulPose(rotation);
+            }
+            float scale = access.ip_getCrossPortalScale();
+            if (scale != 1.0f) {
+                poseStack.scale(scale, scale, scale);
+            }
+        }
+        catch (Throwable e) {
+            disable(e);
+        }
     }
 }

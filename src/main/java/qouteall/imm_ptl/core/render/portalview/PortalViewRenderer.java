@@ -82,6 +82,7 @@ public class PortalViewRenderer {
     
     private static final boolean DUMP_VIEWS = System.getProperty("ip.dumpviews") != null;
     private static int dumpCounter = 0;
+    private static String lastFogColor = "?";
 
     public static final RenderPipeline PORTAL_VIEW_PIPELINE = RenderPipeline.builder(
             net.minecraft.client.renderer.RenderPipelines.GLOBALS_SNIPPET
@@ -344,6 +345,12 @@ public class PortalViewRenderer {
                     portal.getDestDim().identifier(), destWorld.getChunkSource().getLoadedChunksCount(),
                     newCameraPos, destRenderer.sectionRenderDispatcher() == null ? "null dispatcher" : "ok"
                 );
+                LOGGER.info(
+                    "Portal view debug 2: viewArea={} visibleSections={} compiledAllSections={} skyRenderer={} fogColor={}",
+                    destRenderer.viewArea() != null, destRenderer.visibleSections().size(),
+                    destRenderer.hasRenderedAllSections(), destRenderer.skyRenderer() != null,
+                    lastFogColor
+                );
             }
             if (dumpCounter % 120 == 5) {
                 net.minecraft.client.Screenshot.grab(
@@ -375,6 +382,7 @@ public class PortalViewRenderer {
             camera, client.options.getEffectiveRenderDistance(), deltaTracker, 0.0f, destWorld
         );
 
+        lastFogColor = cameraState.fogData.color.toString();
         destExtractor.extract(deltaTracker, camera, partialTick);
 
         // the extraction may have updated the camera state

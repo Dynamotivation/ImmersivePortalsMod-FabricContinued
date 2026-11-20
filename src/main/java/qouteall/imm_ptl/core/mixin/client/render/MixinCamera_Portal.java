@@ -10,7 +10,9 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
+import net.minecraft.world.attribute.EnvironmentAttributeProbe;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import qouteall.imm_ptl.core.ducks.IEPortalCamera;
@@ -44,6 +46,13 @@ public abstract class MixinCamera_Portal implements IEPortalCamera {
     private Frustum cullFrustum;
     @Shadow
     private int matrixPropertiesDirty;
+    // the probe caches the environment (fog, sky colour, ...) of the level the camera is in
+    @Shadow
+    @Mutable
+    @Final
+    private EnvironmentAttributeProbe attributeProbe;
+    @Unique
+    private EnvironmentAttributeProbe ip_savedProbe;
     
     @Unique
     private boolean ip_overridden = false;
@@ -86,6 +95,11 @@ public abstract class MixinCamera_Portal implements IEPortalCamera {
         ip_savedRotation.set(rotation);
         ip_savedFrustum = cullFrustum;
         
+        ip_savedProbe = attributeProbe;
+        EnvironmentAttributeProbe newProbe = new EnvironmentAttributeProbe();
+        newProbe.tick(newLevel, pos);
+        attributeProbe = newProbe;
+        
         level = newLevel;
         position = pos;
         blockPosition.set(pos.x, pos.y, pos.z);
@@ -106,6 +120,9 @@ public abstract class MixinCamera_Portal implements IEPortalCamera {
             return;
         }
         ip_overridden = false;
+        
+        attributeProbe = ip_savedProbe;
+        ip_savedProbe = null;
         
         level = ip_savedLevel;
         position = ip_savedPosition;

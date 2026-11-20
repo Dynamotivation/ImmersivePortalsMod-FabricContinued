@@ -241,6 +241,24 @@ public class PortalViewRenderer {
         .build();
 
     private static boolean endPlaceholderBroken = false;
+    private static boolean shaderFallbackWarned = false;
+
+    // portals of a world with an active shader pack: only the opaque placeholder (nether texture / end stars)
+    private static void drawShaderFallback(PortalView view, RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos) {
+        try {
+            if (view.portal instanceof qouteall.imm_ptl.core.portal.EndPortalEntity) {
+                if (!endPlaceholderBroken) {
+                    drawEndPlaceholder(view, mainTarget, viewRotation, cameraPos, 1.0f);
+                }
+            }
+            else if (usesLoadingPlaceholder(view.portal)) {
+                drawPlaceholder(view, mainTarget, viewRotation, cameraPos, 1.0f);
+            }
+        }
+        catch (Throwable e) {
+            LOGGER.error("Shader fallback placeholder failed", e);
+        }
+    }
 
     private static void drawEndPlaceholder(
         PortalView view, RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos, float alpha
@@ -485,7 +503,9 @@ public class PortalViewRenderer {
 
     private static void endFrame() {
         for (PortalView view : views) {
-            targetPool.push(view.target);
+            if (view.target != null) {
+                targetPool.push(view.target);
+            }
         }
         views.clear();
         for (GpuBuffer buffer : buffersToClose) {
@@ -543,6 +563,19 @@ public class PortalViewRenderer {
 
         List<Portal> portals = collectPortalsToRender(camera, cameraPos);
         if (portals.isEmpty()) {
+            return;
+        }
+
+        if (qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface.invoker.isShaders()) {
+            // Iris swaps its own rendering pipeline per dimension, which the portal view renderer does not drive yet.
+            // Rendering destinations would corrupt the shader pack's state, so the panes show the loading texture.
+            if (!shaderFallbackWarned) {
+                shaderFallbackWarned = true;
+                LOGGER.warn("A shader pack is active: portal views are disabled, portals show a placeholder texture");
+            }
+            for (Portal portal : portals) {
+                views.add(new PortalView(portal, null));
+            }
             return;
         }
 
@@ -859,6 +892,10 @@ public class PortalViewRenderer {
         placeholderLastNanos = now;
 
         for (PortalView view : views) {
+            if (view.target == null) {
+                drawShaderFallback(view, mainTarget, viewRotation, cameraPos);
+                continue;
+            }
             drawView(view, mainTarget, viewRotation, cameraPos);
             drawOverlay(view, mainTarget, viewRotation, cameraPos);
             boolean netherPlaceholder = usesLoadingPlaceholder(view.portal);

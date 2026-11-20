@@ -55,6 +55,23 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
     @Unique
     private final ProjectionMatrixBuffer[] ip_portalProjectionBuffers = new ProjectionMatrixBuffer[2];
     
+    @Shadow
+    @Final
+    private net.minecraft.client.Camera mainCamera;
+
+    // Teleportation must be checked every FRAME, before the camera is updated for the frame. Checking only once per
+    // tick lets the interpolated camera sit past the portal plane (still in the old dimension) for several frames,
+    // which shows as a culled window and a wobble when standing on the portal plane.
+    @Inject(method = "update", at = @At("HEAD"))
+    private void ip_teleportBeforeCameraUpdate(DeltaTracker deltaTracker, CallbackInfo ci) {
+        if (minecraft.isGameLoadFinished() && minecraft.level != null && minecraft.player != null) {
+            qouteall.imm_ptl.core.render.context_management.RenderStates.setPartialTick(
+                mainCamera.getCameraEntityPartialTicks(deltaTracker)
+            );
+            qouteall.imm_ptl.core.teleportation.ClientTeleportationManager.manageTeleportation(false);
+        }
+    }
+
     // the destinations of portals are rendered before the main level is extracted,
     // as every extraction overwrites the shared level render state
     @Inject(method = "extract", at = @At("HEAD"))

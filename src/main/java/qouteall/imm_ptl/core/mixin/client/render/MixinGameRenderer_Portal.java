@@ -139,14 +139,56 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
             PortalViewRenderer.onBeforeExtract((GameRenderer) (Object) this, deltaTracker);
         }
     }
-    
+
+    // Around the main LevelRenderer.render (anchored on the profiler sections, not on the render call, which Iris wraps
+    // with a WrapOperation): with a shader pack Iris' final pass overwrites the main target at the end of
+    // LevelRenderer.render, so the portal panes are drawn after it. require = 0: if missing, the panes stay in the
+    // level's frame graph (PortalViewRenderer.shouldAddViewPass).
+    @Inject(
+        method = "renderLevel",
+        at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", args = "ldc=level"),
+        require = 0
+    )
+    private void ip_beforeMainLevelRender(DeltaTracker deltaTracker, CallbackInfo ci) {
+        PortalViewRenderer.onBeforeMainLevelRender();
+    }
+
+    @Inject(
+        method = "renderLevel",
+        at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", args = "ldc=hand"),
+        require = 0
+    )
+    private void ip_afterMainLevelRender(DeltaTracker deltaTracker, CallbackInfo ci) {
+        PortalViewRenderer.onAfterMainLevelRender((GameRenderer) (Object) this);
+    }
+
     // make the level renderer draw into the offscreen target when rendering a portal destination
     @Inject(method = "mainRenderTarget", at = @At("HEAD"), cancellable = true)
     private void ip_overrideMainRenderTarget(CallbackInfoReturnable<RenderTarget> cir) {
         RenderTarget override = PortalViewRenderer.getActiveTargetOverride();
+        RenderTarget target = override != null ? override : mainRenderTarget;
+        // SkyRenderer draws into the RenderTarget it captured when it was created (not the frame graph's target).
+        // LevelRenderer.render asks for mainRenderTarget() first, so keep the current renderer's sky on that target.
+        qouteall.imm_ptl.core.render.SkyRendererTargets.sync(minecraft.levelRenderer, target);
         if (override != null) {
             cir.setReturnValue(override);
         }
+    }
+
+    @Shadow
+    @Final
+    private RenderTarget mainRenderTarget;
+
+    @Override
+    public void ip_onPlayerChangedDimension(net.minecraft.client.multiplayer.ClientLevel toWorld, net.minecraft.world.phys.Vec3 eyePos) {
+        // The camera's environment probe (fog/sky/cloud colour, sun angle, lightmap factors) still holds the OLD level and
+        // position and is only re-ticked in the next client tick: the first frame(s) in the new dimension were rendered with
+        // the old dimension's values (Nether -> Overworld: SKY_COLOR 0 = black sky, dark red fog ending at 96, sky light 0).
+        net.minecraft.world.attribute.EnvironmentAttributeProbe probe = mainCamera.attributeProbe();
+        probe.reset();
+        probe.tick(toWorld, eyePos);
+        // the main lightmap is only re-extracted once per tick as well
+        ((IELightmapRenderStateExtractor) lightmapRenderStateExtractor).ip_setNeedsUpdate(true);
     }
     
     @Override

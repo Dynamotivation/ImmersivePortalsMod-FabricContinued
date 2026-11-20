@@ -34,3 +34,6 @@ transitive-accessible field net/minecraft/client/multiplayer/ClientChunkCache st
 transitive-accessible field net/minecraft/client/multiplayer/ClientChunkCache level Lnet/minecraft/client/multiplayer/ClientLevel;
 
 transitive-accessible class net/minecraft/util/datafix/fixes/ItemStackComponentizationFix$ItemStackData
+# portal views: the sky renderer of a level renderer draws into the target it captured at creation, retargeted per render (SkyRendererTargets)
+accessible field net/minecraft/client/renderer/SkyRenderer renderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
+mutable field net/minecraft/client/renderer/SkyRenderer renderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;

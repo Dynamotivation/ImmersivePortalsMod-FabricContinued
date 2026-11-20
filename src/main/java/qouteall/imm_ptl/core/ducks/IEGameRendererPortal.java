@@ -34,4 +34,10 @@ public interface IEGameRendererPortal {
      * GameRenderer.render rewrites it for the main view later in the frame.
      */
     void ip_updateGlobalSettingsForView(net.minecraft.client.DeltaTracker deltaTracker, net.minecraft.world.phys.Vec3 cameraPos);
+
+    /**
+     * The client player switched dimension in the middle of a frame: re-tick the main camera's environment probe in the new
+     * level at the new eye position and force the main lightmap to be re-extracted.
+     */
+    void ip_onPlayerChangedDimension(net.minecraft.client.multiplayer.ClientLevel toWorld, net.minecraft.world.phys.Vec3 eyePos);
 }

@@ -3,6 +3,12 @@
   "package": "qouteall.imm_ptl.core.compat.mixin",
   "compatibilityLevel": "JAVA_25",
   "plugin": "qouteall.imm_ptl.core.compat.IPCompatMixinPlugin",
+  "client": [
+    "iris.MixinIrisPipelineManager",
+    "iris.MixinIrisCommonUniforms",
+    "iris.MixinIrisShaderCreator",
+    "iris.MixinIrisHandRenderer"
+  ],
   "mixins": [
     "cardinal_comp.MixinCardinalCompComponentKey"
   ],

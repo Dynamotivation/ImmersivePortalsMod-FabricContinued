@@ -175,6 +175,8 @@ public class PortalViewRenderer {
         public boolean ready = false;
         // rendered with a flipped x axis (mirror), see renderPortalView
         public boolean flipped = false;
+        // the target belongs to the portal (Iris camera pipeline views), it is not returned to the pool
+        public boolean persistentTarget = false;
 
         PortalView(Portal portal, TextureTarget target) {
             this.portal = portal;
@@ -187,6 +189,7 @@ public class PortalViewRenderer {
         Identifier.fromNamespaceAndPath("immersive_portals", "textures/gui/portal_placeholder.png");
     private static final float PLACEHOLDER_FADE_SECONDS = 0.6f;
     private static final float PLACEHOLDER_MAX_WAIT_SECONDS = 8.0f;
+    private static final float PLACEHOLDER_MIN_SECONDS = 0.35f;
     private static final int PLACEHOLDER_READY_FRAMES = 3;
 
     private static class PlaceholderState {
@@ -241,7 +244,144 @@ public class PortalViewRenderer {
         .build();
 
     private static boolean endPlaceholderBroken = false;
-    private static boolean shaderFallbackWarned = false;
+    private static String shaderFallbackLoggedReason = null;
+
+    // ---- active Iris shader pack (see IrisInterface, compat.iris_portal_view, PORTING.md section B) ----
+    // With a pack, each view renders through its own Iris camera pipeline (bounded: at most 2 views, no nested
+    // views), keeps the plain projection (shader packs reconstruct distances from depth) and is clipped by the
+    // pack's G-buffer programs instead of the oblique near plane. Iris' final pass overwrites the main target at the
+    // end of LevelRenderer.render, so the main panes are drawn after it (onAfterMainLevelRender).
+    public static final int MAX_VIEWS_WITH_SHADERS = 2;
+    private static final long IRIS_TARGET_EXPIRY_FRAMES = 200;
+    // a shader pack is active this frame
+    private static boolean shaderPackFrame = false;
+    // portal views are rendered through Iris camera pipelines this frame
+    private static boolean irisViewsThisFrame = false;
+    // MixinGameRenderer_Portal's hooks around the main LevelRenderer.render ran (require = 0)
+    private static boolean mainLevelHooksSeen = false;
+    private static boolean mainLevelAfterHookSeen = false;
+    private static GpuBufferSlice mainLevelProjection = null;
+    private static com.mojang.blaze3d.ProjectionType mainLevelProjectionType = null;
+    private static boolean afterLevelDrawFailedLogged = false;
+    // a failure disables the Iris views until Iris recreates its pipelines (shader reload, pack/dimension change)
+    private static boolean irisFailed = false;
+    private static int irisFailedGeneration = 0;
+    private static boolean irisReleasePending = false;
+
+    // persistent per-portal targets for Iris views: an Iris pipeline rebuilds its passes when the depth texture of
+    // GameRenderer.mainRenderTarget() changes, so a camera pipeline must always render into the same target
+    private static final class IrisViewTarget {
+        TextureTarget target;
+        long lastUsedFrame;
+    }
+
+    private static final java.util.Map<java.util.UUID, IrisViewTarget> irisTargets = new java.util.HashMap<>();
+
+    private static TextureTarget acquireIrisTarget(java.util.UUID portalId, int width, int height) {
+        IrisViewTarget entry = irisTargets.computeIfAbsent(portalId, k -> new IrisViewTarget());
+        if (entry.target != null && (entry.target.width != width || entry.target.height != height)) {
+            entry.target.destroyBuffers();
+            entry.target = null;
+        }
+        if (entry.target == null) {
+            entry.target = new TextureTarget("Portal view (Iris)", width, height, true, GpuFormat.RGBA8_UNORM);
+        }
+        entry.lastUsedFrame = frameCounter;
+        return entry.target;
+    }
+
+    /** Releases persistent Iris targets and camera pipelines (all of them, or the ones unused for a while). */
+    private static void releaseIrisViewResources(boolean all) {
+        if (irisTargets.isEmpty() && !all) {
+            return;
+        }
+        java.util.Iterator<java.util.Map.Entry<java.util.UUID, IrisViewTarget>> iterator = irisTargets.entrySet().iterator();
+        while (iterator.hasNext()) {
+            java.util.Map.Entry<java.util.UUID, IrisViewTarget> entry = iterator.next();
+            if (all || frameCounter - entry.getValue().lastUsedFrame > IRIS_TARGET_EXPIRY_FRAMES) {
+                try {
+                    if (entry.getValue().target != null) {
+                        entry.getValue().target.destroyBuffers();
+                    }
+                    qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface.invoker.releasePortalView(entry.getKey());
+                }
+                catch (Throwable e) {
+                    LOGGER.error("Failed to release the Iris portal view resources of {}", entry.getKey(), e);
+                }
+                iterator.remove();
+            }
+        }
+        if (all) {
+            try {
+                qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface.invoker.releaseAllPortalViews();
+            }
+            catch (Throwable e) {
+                LOGGER.error("Failed to release the Iris camera pipelines", e);
+            }
+        }
+    }
+
+    private static void logShaderFallback(String reason) {
+        if (!reason.equals(shaderFallbackLoggedReason)) {
+            shaderFallbackLoggedReason = reason;
+            LOGGER.warn("A shader pack is active and portal views cannot use it ({}): portals show a placeholder texture", reason);
+        }
+    }
+
+    private static void onIrisViewFailure(Portal portal, Throwable e) {
+        if (!irisFailed) {
+            LOGGER.error(
+                "Rendering portal view {} through an Iris camera pipeline failed; portals show a placeholder until the shader pack is reloaded",
+                portal, e
+            );
+        }
+        irisFailed = true;
+        irisFailedGeneration = qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface.invoker.getPipelineGeneration();
+        // views already rendered this frame still sample their targets: release at the start of the next frame
+        irisReleasePending = true;
+    }
+
+    /** Called before the main LevelRenderer.render (GameRenderer.renderLevel), see MixinGameRenderer_Portal. */
+    public static void onBeforeMainLevelRender() {
+        mainLevelHooksSeen = true;
+        mainLevelProjection = RenderSystem.getProjectionMatrixBuffer();
+        mainLevelProjectionType = RenderSystem.getProjectionType();
+    }
+
+    /**
+     * Called after the main LevelRenderer.render (GameRenderer.renderLevel). With a shader pack, Iris' final pass
+     * has overwritten the main target at the end of LevelRenderer.render, so the panes (views or placeholders) are
+     * drawn now, depth tested against the level depth that Iris leaves in the main depth texture.
+     */
+    public static void onAfterMainLevelRender(GameRenderer gameRenderer) {
+        GpuBufferSlice levelProjection = mainLevelProjection;
+        com.mojang.blaze3d.ProjectionType levelProjectionType = mainLevelProjectionType;
+        mainLevelProjection = null;
+        mainLevelAfterHookSeen = true;
+        if (!shaderPackFrame || views.isEmpty() || isRenderingViews) {
+            return;
+        }
+        GpuBufferSlice currentProjection = RenderSystem.getProjectionMatrixBuffer();
+        com.mojang.blaze3d.ProjectionType currentProjectionType = RenderSystem.getProjectionType();
+        try {
+            if (levelProjection != null) {
+                RenderSystem.setProjectionMatrix(levelProjection, levelProjectionType);
+            }
+            CameraRenderState cameraState = gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
+            drawViews(gameRenderer.mainRenderTarget(), new Matrix4f(cameraState.viewRotationMatrix), cameraState.pos);
+        }
+        catch (Throwable e) {
+            if (!afterLevelDrawFailedLogged) {
+                afterLevelDrawFailedLogged = true;
+                LOGGER.error("Failed to draw the portal panes after the level", e);
+            }
+        }
+        finally {
+            if (currentProjection != null) {
+                RenderSystem.setProjectionMatrix(currentProjection, currentProjectionType);
+            }
+        }
+    }
 
     // portals of a world with an active shader pack: only the opaque placeholder (nether texture / end stars)
     private static void drawShaderFallback(PortalView view, RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos) {
@@ -420,6 +560,35 @@ public class PortalViewRenderer {
         }
     }
 
+    /**
+     * Whether the destination of a portal can be revealed. "All sections rendered" alone is true while nothing was
+     * queued yet (before the destination chunks even arrived), which revealed an empty view and made the terrain
+     * pop in behind it. So the chunks around the arrival point must be loaded and sections must have been rendered.
+     */
+    private static boolean isDestinationReady(
+        Portal portal, ClientLevel destWorld, LevelExtractor destExtractor, LevelRenderer destRenderer
+    ) {
+        if (!destRenderer.hasRenderedAllSections()) {
+            return false;
+        }
+        if (destExtractor.countRenderedSections() <= 0) {
+            return false;
+        }
+        net.minecraft.core.BlockPos arrival = net.minecraft.core.BlockPos.containing(portal.getDestPos());
+        int chunkX = arrival.getX() >> 4;
+        int chunkZ = arrival.getZ() >> 4;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (destWorld.getChunkSource().getChunk(
+                    chunkX + dx, chunkZ + dz, net.minecraft.world.level.chunk.status.ChunkStatus.FULL, false
+                ) == null) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     /** @return 0 when the placeholder is fully opaque, 1 when the portal view is fully visible */
     private static float updatePlaceholder(PortalView view, float deltaSeconds) {
         PlaceholderState state = placeholderStates.computeIfAbsent(view.portal.getUUID(), k -> new PlaceholderState());
@@ -433,7 +602,9 @@ public class PortalViewRenderer {
                 state.readyFrames = 0;
             }
             // reveal when the terrain has been built for a few frames (or after a maximum wait, so it never sticks)
-            boolean reveal = state.readyFrames >= PLACEHOLDER_READY_FRAMES
+            // (and show the placeholder for a minimum time, so the effect is always visible)
+            boolean reveal = (state.readyFrames >= PLACEHOLDER_READY_FRAMES
+                && state.waitedSeconds >= PLACEHOLDER_MIN_SECONDS)
                 || state.waitedSeconds > PLACEHOLDER_MAX_WAIT_SECONDS;
             if (reveal) {
                 state.fade = java.lang.Math.min(1.0f, state.fade + deltaSeconds / PLACEHOLDER_FADE_SECONDS);
@@ -466,7 +637,12 @@ public class PortalViewRenderer {
 
     /** whether the frame graph of the level renderer has to draw portal panes (main view or a nested destination) */
     public static boolean shouldAddViewPass() {
-        return !isRenderingViews || !drawListStack.isEmpty();
+        if (!isRenderingViews) {
+            // with a shader pack the main panes are drawn after LevelRenderer.render (Iris' final pass would
+            // overwrite them), if the hooks around it are installed (require = 0)
+            return !(shaderPackFrame && mainLevelHooksSeen && mainLevelAfterHookSeen);
+        }
+        return !drawListStack.isEmpty();
     }
 
     // The oblique projection clips everything on the camera side of the portal plane, which would also cut the sky
@@ -517,17 +693,21 @@ public class PortalViewRenderer {
             sampler.close();
             sampler = null;
         }
+        // world change / disconnect: Iris camera pipelines and their targets
+        releaseIrisViewResources(true);
+        irisReleasePending = false;
+        irisFailed = false;
     }
 
     private static void endFrame() {
         for (PortalView view : views) {
-            if (view.target != null) {
+            if (view.target != null && !view.persistentTarget) {
                 targetPool.push(view.target);
             }
         }
         views.clear();
         for (PortalView view : nestedViewsOwned) {
-            if (view.target != null) {
+            if (view.target != null && !view.persistentTarget) {
                 targetPool.push(view.target);
             }
         }
@@ -570,6 +750,32 @@ public class PortalViewRenderer {
             RenderStates.onFrameStart();
         }
 
+        qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface.Invoker iris =
+            qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface.invoker;
+        irisViewsThisFrame = false;
+        if (!isRenderingViews) {
+            shaderPackFrame = iris.isShaders();
+            try {
+                if (irisReleasePending || (!shaderPackFrame && !irisTargets.isEmpty())) {
+                    // after a failure, or the pack was disabled: everything
+                    releaseIrisViewResources(true);
+                    irisReleasePending = false;
+                }
+                else {
+                    releaseIrisViewResources(false);
+                }
+                iris.onFrameStart(frameCounter);
+            }
+            catch (Throwable e) {
+                LOGGER.error("Failed to release Iris portal view resources", e);
+            }
+            if (irisFailed && iris.getPipelineGeneration() != irisFailedGeneration) {
+                // Iris recreated its pipelines (shader reload, pack or dimension change): try again
+                irisFailed = false;
+                shaderFallbackLoggedReason = null;
+            }
+        }
+
         if (isRenderingViews || client.level == null || client.player == null) {
             return;
         }
@@ -597,29 +803,67 @@ public class PortalViewRenderer {
             return;
         }
 
-        if (qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface.invoker.isShaders()) {
-            // Iris swaps its own rendering pipeline per dimension, which the portal view renderer does not drive yet.
-            // Rendering destinations would corrupt the shader pack's state, so the panes show the loading texture.
-            if (!shaderFallbackWarned) {
-                shaderFallbackWarned = true;
-                LOGGER.warn("A shader pack is active: portal views are disabled, portals show a placeholder texture");
+        if (shaderPackFrame) {
+            // Iris keeps one pipeline per dimension whose per-frame state cannot be shared with the main view, so
+            // views need their own Iris camera pipelines (compat.iris_portal_view). Without them (optional mixins
+            // missing, unsupported Iris version, earlier failure) the panes show the placeholder texture.
+            String reason;
+            try {
+                reason = irisFailed ? "an earlier Iris portal view failed" : iris.getPortalViewUnsupportedReason();
             }
-            for (Portal portal : portals) {
-                views.add(new PortalView(portal, null));
+            catch (Throwable e) {
+                reason = "support check failed: " + e;
             }
-            return;
+            if (reason != null) {
+                logShaderFallback(reason);
+                for (Portal portal : portals) {
+                    views.add(new PortalView(portal, null));
+                }
+                return;
+            }
+            irisViewsThisFrame = true;
+            if (portals.size() > MAX_VIEWS_WITH_SHADERS) {
+                portals = new ArrayList<>(portals.subList(0, MAX_VIEWS_WITH_SHADERS));
+            }
         }
 
         isRenderingViews = true;
         try {
             Profiler.get().push("imm_ptl_portal_views");
             for (Portal portal : portals) {
+                if (irisViewsThisFrame && irisFailed) {
+                    // an earlier view of this frame failed
+                    views.add(new PortalView(portal, null));
+                    continue;
+                }
+                // Iris' singleton scratch state (fog, captured matrices, shadow statics) is overwritten by the
+                // destination's extraction and render
+                Runnable restoreIrisState = null;
                 try {
+                    if (irisViewsThisFrame) {
+                        restoreIrisState = iris.preserveCameraState();
+                    }
                     renderPortalView(gameRenderer, deltaTracker, camera, portal, null, false, views);
                 }
                 catch (Throwable e) {
-                    LOGGER.error("Failed to render portal view {}", portal, e);
                     recoverFromFailedView(gameRenderer);
+                    if (irisViewsThisFrame) {
+                        onIrisViewFailure(portal, e);
+                        views.add(new PortalView(portal, null));
+                    }
+                    else {
+                        LOGGER.error("Failed to render portal view {}", portal, e);
+                    }
+                }
+                finally {
+                    if (restoreIrisState != null) {
+                        try {
+                            restoreIrisState.run();
+                        }
+                        catch (Throwable e) {
+                            LOGGER.error("Failed to restore the Iris state after a portal view", e);
+                        }
+                    }
                 }
             }
             Profiler.get().pop();
@@ -731,7 +975,11 @@ public class PortalViewRenderer {
         }
 
         RenderTarget mainTarget = gameRenderer.mainRenderTarget();
-        TextureTarget target = acquireTarget(mainTarget.width, mainTarget.height);
+        // Iris camera pipelines must keep rendering into the same target (see irisTargets)
+        boolean irisView = irisViewsThisFrame;
+        TextureTarget target = irisView
+            ? acquireIrisTarget(portal.getUUID(), mainTarget.width, mainTarget.height)
+            : acquireTarget(mainTarget.width, mainTarget.height);
 
         Vec3 cameraPos = camera.position();
 
@@ -744,6 +992,7 @@ public class PortalViewRenderer {
 
         // the projection of the main camera
         Matrix4f projection;
+        Matrix4f screenEffects = null;
         if (parentProjection != null) {
             // nested view: the pane is drawn into the parent's target with the parent's projection
             projection = new Matrix4f(parentProjection);
@@ -757,10 +1006,22 @@ public class PortalViewRenderer {
             // drawn in the main view, so the destination needs the same, or its content swims against the frame while walking.
             CameraRenderState mainCameraState = gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
             camera.extractRenderState(mainCameraState, camera.getCameraEntityPartialTicks(deltaTracker));
-            projection.set(((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_applyScreenEffects(
-                projection, mainCameraState, deltaTracker.getGameTimeDeltaPartialTick(false)
-            ));
+            if (irisView) {
+                // With shaders on, Iris moves bobbing/spin from the projection into the model-view
+                // (MixinModelViewBobbing: modelView.mulLocal(bobStack)) so the pack sees a plain projection. Do the
+                // same for the view: P * (S * V_B) is the same transformation as (P * S) * V_B.
+                screenEffects = ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_applyScreenEffects(
+                    new Matrix4f(), mainCameraState, deltaTracker.getGameTimeDeltaPartialTick(false)
+                );
+            }
+            else {
+                projection.set(((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_applyScreenEffects(
+                    projection, mainCameraState, deltaTracker.getGameTimeDeltaPartialTick(false)
+                ));
+            }
         }
+        // the model-view the destination is rendered with
+        Matrix4f renderView = screenEffects == null ? viewB : screenEffects.mul(viewB, new Matrix4f());
         // without the mirror flip: nested views continue from this
         Matrix4f baseProjection = new Matrix4f(projection);
 
@@ -782,15 +1043,33 @@ public class PortalViewRenderer {
             new Vector3f((float) planePoint.x, (float) planePoint.y, (float) planePoint.z)
         );
         float d = -nEye.dot(pEye);
+        // with shaders the destination's model-view is S * V_B (renderView): a plane (covector) maps with (S^-1)^T
+        Vector4f renderViewPlane = new Vector4f(nEye.x, nEye.y, nEye.z, d);
+        if (screenEffects != null) {
+            new Matrix4f(screenEffects).invert().transpose().transform(renderViewPlane);
+        }
         boolean zZeroToOne = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne();
         // When the camera is almost on the clip plane the oblique frustum degenerates (everything gets clipped, the
         // view turns into a solid colour). Close to the pane only a sliver of the destination lies in front of the
         // destination plane, so the plain projection is used there.
         boolean cameraNearPlane = java.lang.Math.abs(portal.getDistanceToPlane(cameraPos)) < 0.3;
-        Matrix4f obliqueProjection = cameraNearPlane
-            ? new Matrix4f(projection)
-            : ObliqueProjection.apply(projection, nEye.x, nEye.y, nEye.z, d, zZeroToOne);
+        Matrix4f obliqueProjection;
+        Vector4f shaderClip = null;
+        if (irisView) {
+            // Shader packs reconstruct distances from depth assuming a plain perspective projection: keep it, and let
+            // the pack's G-buffer programs discard what is in front of the destination plane (IrisPortalClipping)
+            obliqueProjection = new Matrix4f(projection);
+            if (!cameraNearPlane) {
+                shaderClip = ShaderClipCoefficients.compute(projection, renderViewPlane);
+            }
+        }
+        else {
+            obliqueProjection = cameraNearPlane
+                ? new Matrix4f(projection)
+                : ObliqueProjection.apply(projection, nEye.x, nEye.y, nEye.z, d, zZeroToOne);
+        }
         Matrix4f normalProjection = new Matrix4f(projection);
+        Vector4f viewShaderClip = shaderClip;
 
         // culling frustum (non-reversed projection)
         Matrix4f cullProjection = new Matrix4f().perspective(
@@ -813,8 +1092,8 @@ public class PortalViewRenderer {
                 try {
                     renderLevelInto(
                         gameRenderer, deltaTracker, camera, destWorld, destExtractor, destRenderer,
-                        target, viewB, obliqueProjection, frustum, newCameraPos,
-                        portal, baseProjection, mirrored, normalProjection
+                        target, renderView, obliqueProjection, frustum, newCameraPos,
+                        portal, baseProjection, mirrored, normalProjection, irisView, viewShaderClip
                     );
                 }
                 finally {
@@ -831,7 +1110,8 @@ public class PortalViewRenderer {
         }
 
         PortalView portalView = new PortalView(portal, target);
-        portalView.ready = destRenderer.hasRenderedAllSections();
+        portalView.persistentTarget = irisView;
+        portalView.ready =isDestinationReady(portal, destWorld, destExtractor, destRenderer);
         // the pane samples the target by screen position: x is flipped back when this target was rendered with a
         // different flip than the target the pane is drawn into
         portalView.flipped = mirrored != parentFlipped;
@@ -868,12 +1148,14 @@ public class PortalViewRenderer {
         GameRenderer gameRenderer, DeltaTracker deltaTracker, Camera camera, ClientLevel destWorld,
         LevelExtractor destExtractor, LevelRenderer destRenderer, TextureTarget target,
         Matrix4f viewMatrix, Matrix4f projectionMatrix, Frustum frustum, Vec3 cameraPos,
-        Portal parentPortal, Matrix4f baseProjection, boolean flipped, Matrix4f normalProjection
+        Portal parentPortal, Matrix4f baseProjection, boolean flipped, Matrix4f normalProjection,
+        boolean irisView, @org.jetbrains.annotations.Nullable Vector4f shaderClip
     ) {
         // Nested views first: every extraction/render overwrites the shared level render state, so everything seen
         // through this destination's own portals is rendered before this destination is extracted.
+        // No nested views through Iris camera pipelines (bounded: one pipeline per top-level view).
         List<PortalView> nested = java.util.Collections.emptyList();
-        if (viewDepth < MAX_VIEW_DEPTH && viewsRenderedThisFrame < MAX_VIEWS_PER_FRAME) {
+        if (!irisView && viewDepth < MAX_VIEW_DEPTH && viewsRenderedThisFrame < MAX_VIEWS_PER_FRAME) {
             List<Portal> nestedPortals = collectPortalsToRender(camera, cameraPos, destWorld, parentPortal);
             if (!nestedPortals.isEmpty()) {
                 nested = new ArrayList<>();
@@ -979,7 +1261,15 @@ public class PortalViewRenderer {
             (qouteall.imm_ptl.core.ducks.IELevelRendererPortal) destRenderer;
         net.minecraft.client.renderer.CloudRenderer originalClouds = rendererAccess.ip_getCloudRenderer();
         rendererAccess.ip_setCloudRenderer(acquireCloudRenderer());
+        qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface.Invoker iris =
+            qouteall.imm_ptl.core.compat.iris_compatibility.IrisInterface.invoker;
+        Runnable endIrisView = null;
         try {
+            if (irisView) {
+                // Iris' LevelRenderer hook now gets this view's camera pipeline (created on first use)
+                endIrisView = iris.beginPortalView(parentPortal.getUUID());
+                iris.setShaderClipping(shaderClip);
+            }
             destRenderer.render(
                 ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_getResourcePool(),
                 deltaTracker, false, cameraState, cameraState.viewRotationMatrix,
@@ -987,6 +1277,16 @@ public class PortalViewRenderer {
             );
         }
         finally {
+            if (irisView) {
+                try {
+                    iris.setShaderClipping(null);
+                }
+                finally {
+                    if (endIrisView != null) {
+                        endIrisView.run();
+                    }
+                }
+            }
             if (pushedNested) {
                 drawListStack.pop();
             }

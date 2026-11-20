@@ -491,7 +491,11 @@ public class ClientTeleportationManager {
         
         // camera level and lighting of the new dimension (the extractor was switched along with the renderer)
         client.gameRenderer.setLevel(toWorld);
-        
+        // Camera.setLevel does not refresh the camera's environment probe (ticked once per client tick): without this the
+        // frame of the switch renders the new dimension with the old dimension's sky/fog/light values (black frame)
+        ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) client.gameRenderer)
+            .ip_onPlayerChangedDimension(toWorld, newEyePos);
+
         if (client.particleEngine != null) {
             // avoid clearing all particles
             ((IEParticleManager) client.particleEngine).ip_setWorld(toWorld);

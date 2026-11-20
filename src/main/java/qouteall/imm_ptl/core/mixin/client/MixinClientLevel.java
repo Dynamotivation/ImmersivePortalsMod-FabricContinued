@@ -5,7 +5,8 @@ import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
-import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.extract.LevelExtractor;
+import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.TickRateManager;
@@ -33,7 +34,6 @@ import qouteall.q_misc_util.my_util.LimitedLogger;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 @Mixin(ClientLevel.class)
 public abstract class MixinClientLevel implements IEClientWorld {
@@ -59,20 +59,15 @@ public abstract class MixinClientLevel implements IEClientWorld {
     @Final
     private Minecraft minecraft;
     
-    @Mutable
-    @Shadow
-    @Final
-    private LevelRenderer levelRenderer;
-    
     @Shadow
     @Final
     private EntityTickList tickingEntities;
     
     @Shadow
-    protected abstract Map<String, MapItemSavedData> getAllMapData();
+    protected abstract Map<MapId, MapItemSavedData> getAllMapData();
     
     @Shadow
-    protected abstract void addMapData(Map<String, MapItemSavedData> map);
+    protected abstract void addMapData(Map<MapId, MapItemSavedData> map);
     
     @Shadow
     @Final
@@ -100,8 +95,8 @@ public abstract class MixinClientLevel implements IEClientWorld {
     )
     void onConstructed(
         ClientPacketListener clientPacketListener, ClientLevel.ClientLevelData clientLevelData,
-        ResourceKey resourceKey, Holder holder, int loadDistance, int j, Supplier supplier,
-        LevelRenderer levelRenderer, boolean bl, long l, CallbackInfo ci
+        ResourceKey resourceKey, Holder holder, int loadDistance, int simulationDistance,
+        LevelExtractor levelExtractor, boolean isDebug, long biomeZoomSeed, int seaLevel, CallbackInfo ci
     ) {
         ClientLevel clientWorld = (ClientLevel) (Object) this;
         ClientChunkCache myClientChunkManager =
@@ -161,7 +156,7 @@ public abstract class MixinClientLevel implements IEClientWorld {
     
     @Override
     public void ip_resetWorldRendererRef() {
-        levelRenderer = null;
+        // 26.x: ClientLevel no longer references a LevelRenderer (only a LevelExtractor), nothing to reset
     }
     
     @Override
@@ -170,12 +165,12 @@ public abstract class MixinClientLevel implements IEClientWorld {
     }
     
     @Override
-    public Map<String, MapItemSavedData> ip_getAllMapData() {
+    public Map<MapId, MapItemSavedData> ip_getAllMapData() {
         return getAllMapData();
     }
     
     @Override
-    public void ip_addMapData(Map<String, MapItemSavedData> map) {
+    public void ip_addMapData(Map<MapId, MapItemSavedData> map) {
         addMapData(map);
     }
     

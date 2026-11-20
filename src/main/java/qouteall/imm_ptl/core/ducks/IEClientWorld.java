@@ -3,6 +3,7 @@ package qouteall.imm_ptl.core.ducks;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
 import net.minecraft.world.TickRateManager;
 import net.minecraft.world.level.entity.EntityTickList;
+import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import org.jetbrains.annotations.Nullable;
 import qouteall.imm_ptl.core.portal.Portal;
@@ -21,9 +22,9 @@ public interface IEClientWorld {
     
     EntityTickList ip_getEntityList();
     
-    Map<String, MapItemSavedData> ip_getAllMapData();
+    Map<MapId, MapItemSavedData> ip_getAllMapData();
     
-    void ip_addMapData(Map<String, MapItemSavedData> map);
+    void ip_addMapData(Map<MapId, MapItemSavedData> map);
     
     BlockStatePredictionHandler ip_getBlockStatePredictionHandler();
     

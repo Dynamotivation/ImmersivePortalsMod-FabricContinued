@@ -68,6 +68,21 @@ public class IPModEntryClient implements ClientModInitializer {
         
         initPortalRenderers();
         
+        // 26.x: the debug screen is made of registered entries (replaces MixinDebugScreenOverlay)
+        net.minecraft.client.gui.components.debug.DebugScreenEntries.register(
+            net.minecraft.resources.Identifier.fromNamespaceAndPath("immersive_portals", "portal_debug"),
+            (displayer, level, clientChunk, serverChunk) -> {
+                java.util.List<String> lines =
+                    qouteall.imm_ptl.core.render.context_management.RenderStates.collectDebugText();
+                if (IPGlobal.moveDebugTextToTop) {
+                    lines.forEach(displayer::addPriorityLine);
+                }
+                else {
+                    lines.forEach(displayer::addLine);
+                }
+            }
+        );
+        
         boolean isSodiumPresent =
             FabricLoader.getInstance().isModLoaded("sodium");
         if (isSodiumPresent) {

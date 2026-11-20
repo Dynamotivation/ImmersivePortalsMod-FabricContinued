@@ -39,15 +39,6 @@ public class MixinParticleEngine implements IEParticleManager {
         }
     }
     
-    // a lava ember particle can generate a smoke particle during ticking
-    // avoid generating the particle into the wrong dimension
-    @Inject(method = "tickParticle", at = @At("HEAD"), cancellable = true)
-    private void onTickParticle(Particle particle, CallbackInfo ci) {
-        if (((IEParticle) particle).portal_getWorld() != Minecraft.getInstance().level) {
-            ci.cancel();
-        }
-    }
-    
     @Override
     public void ip_setWorld(ClientLevel world_) {
         level = world_;

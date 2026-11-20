@@ -1,76 +1,28 @@
 package qouteall.imm_ptl.core.render.context_management;
 
-import net.minecraft.util.profiling.Profiler;
-import net.minecraft.client.Camera;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import qouteall.imm_ptl.core.ClientWorldLoader;
-import qouteall.imm_ptl.core.ducks.IECamera;
-
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /**
- * {@link FogRenderer}
- * {@link qouteall.imm_ptl.core.mixin.client.multiworld_awareness.MixinFogRenderer}
+ * 26.x: FogRenderer no longer keeps static colour/biome-blend state (fog is computed every frame from
+ * the level's environment attributes), so the per-dimension fog state swapping of the 1.21 port is gone.
+ * Kept as a no-op shell so existing callers still compile.
+ * TODO(26.2): alternate-dimension fog fix (MixinFogRenderer_A_CVB) and fog of the portal destination
+ * must be done in the new portal renderer.
  */
-@SuppressWarnings("SpellCheckingInspection")
 public class FogRendererContext {
-    public float red;
-    public float green;
-    public float blue;
-    public int targetBiomeFog = -1;
-    public int previousBiomeFog = -1;
-    public long biomeChangedTime = -1L;
-    
-    public static Consumer<FogRendererContext> copyContextFromObject;
-    public static Consumer<FogRendererContext> copyContextToObject;
-    public static Supplier<Vec3> getCurrentFogColor;
-    
-    public static StaticFieldsSwappingManager<FogRendererContext> swappingManager;
-    
     public static void init() {
-        //load the class and apply mixin
-        FogRenderer.class.hashCode();
-        
-        swappingManager = new StaticFieldsSwappingManager<>(
-            copyContextFromObject, copyContextToObject, false,
-            FogRendererContext::new
-        );
-        
-        
     }
     
     public static void update() {
-        swappingManager.setOuterDimension(RenderStates.originalPlayerDimension);
-        swappingManager.resetChecks();
-        if (ClientWorldLoader.getIsInitialized()) {
-            ClientWorldLoader.getClientWorlds().forEach(world -> {
-                ResourceKey<Level> dimension = world.dimension();
-                swappingManager.contextMap.computeIfAbsent(
-                    dimension,
-                    k -> new StaticFieldsSwappingManager.ContextRecord<>(
-                        dimension,
-                        new FogRendererContext(),
-                        dimension != RenderStates.originalPlayerDimension
-                    )
-                );
-            });
-        }
     }
     
-    public static Vec3 getFogColorOf(
-        ClientLevel destWorld, Vec3 pos
-    ) {
+    public static Vec3 getFogColorOf(ClientLevel destWorld, Vec3 pos) {
         return null;
     }
     
     public static void onPlayerTeleport(ResourceKey<Level> from, ResourceKey<Level> to) {
-        swappingManager.updateOuterDimensionAndChangeContext(to);
     }
-    
 }

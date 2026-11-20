@@ -215,8 +215,6 @@ public class PortalViewRenderer {
         finally {
             isRenderingViews = false;
             activeTarget = null;
-            // the main view's lightmap was overwritten by the destination views
-            ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_markLightmapDirty();
         }
     }
 
@@ -388,8 +386,8 @@ public class PortalViewRenderer {
         );
 
         lastFogColor = cameraState.fogData.color.toString();
-        // the lightmap of the destination dimension (the camera has the destination's environment now)
-        ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_updateLightmapNow();
+        // TODO(26.2): destination lightmap. Lightmap.render() uses a small ring buffer that cannot be written
+        // several times per frame (it crashed with several portal views), so it needs a separate Lightmap per dimension.
         destExtractor.extract(deltaTracker, camera, partialTick);
 
         // the extraction may have updated the camera state

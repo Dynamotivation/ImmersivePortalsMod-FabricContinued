@@ -71,7 +71,13 @@ public abstract class BreakablePortalEntity extends Portal {
     
     @Override
     protected void readAdditionalSaveData(ValueInput ip_input) {
-        CompoundTag compoundTag = ValueTagBridge.toTag(ip_input);
+        readAdditionalSaveDataTag(ValueTagBridge.toTag(ip_input));
+    }
+
+    // Also used by the client data sync (Portal.readPortalDataFromNbt / acceptDataSync), which only calls the tag
+    // version: without this override reversePortalId stayed null on the client
+    @Override
+    protected void readAdditionalSaveDataTag(CompoundTag compoundTag) {
         super.readAdditionalSaveDataTag(compoundTag);
         if (compoundTag.contains("netherPortalShape")) {
             blockPortalShape = new BlockPortalShape(compoundTag.getCompoundOrEmpty("netherPortalShape"));

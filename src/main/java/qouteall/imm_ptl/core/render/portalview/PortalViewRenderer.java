@@ -390,6 +390,9 @@ public class PortalViewRenderer {
         // several times per frame (it crashed with several portal views), so it needs a separate Lightmap per dimension.
         destExtractor.extract(deltaTracker, camera, partialTick);
 
+        // no clouds in portal views for now (they were drawn wrongly, see PORTING.md)
+        gameRenderer.gameRenderState().levelRenderState.cloudColor = 0;
+        
         // the extraction may have updated the camera state
         cameraState = gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
         cameraState.viewRotationMatrix.set(viewMatrix);

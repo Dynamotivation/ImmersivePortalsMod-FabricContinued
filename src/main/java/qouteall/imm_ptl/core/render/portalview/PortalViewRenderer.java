@@ -262,6 +262,10 @@ public class PortalViewRenderer {
         endFrame();
         frameCounter++;
         endFrameOfViewResources();
+        // per-frame portal counters (RenderStates.getRenderedPortalNum() gates particle extraction in views)
+        if (!isRenderingViews) {
+            RenderStates.onFrameStart();
+        }
 
         if (isRenderingViews || client.level == null || client.player == null) {
             return;
@@ -399,7 +403,13 @@ public class PortalViewRenderer {
         );
         float d = -nEye.dot(pEye);
         boolean zZeroToOne = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne();
-        Matrix4f obliqueProjection = ObliqueProjection.apply(projection, nEye.x, nEye.y, nEye.z, d, zZeroToOne);
+        // When the camera is almost on the clip plane the oblique frustum degenerates (everything gets clipped, the
+        // view turns into a solid colour). Close to the pane only a sliver of the destination lies in front of the
+        // destination plane, so the plain projection is used there.
+        boolean cameraNearPlane = java.lang.Math.abs(portal.getDistanceToPlane(cameraPos)) < 0.3;
+        Matrix4f obliqueProjection = cameraNearPlane
+            ? new Matrix4f(projection)
+            : ObliqueProjection.apply(projection, nEye.x, nEye.y, nEye.z, d, zZeroToOne);
         pendingNormalProjection = new Matrix4f(projection);
 
         // culling frustum (non-reversed projection)

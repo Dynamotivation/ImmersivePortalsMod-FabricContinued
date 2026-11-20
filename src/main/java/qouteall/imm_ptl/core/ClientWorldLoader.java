@@ -143,7 +143,12 @@ public class ClientWorldLoader {
     }
     
     private static void tickRemoteWorld(ClientLevel newWorld) {
-        List<Portal> nearbyPortals = CHelper.getClientNearbyPortals(10).collect(Collectors.toList());
+        // nearest portal first: ambient particles are spawned around the virtual camera of the nearest portal
+        // (range 32: vanilla spawns ambient particles up to 32 blocks from the camera)
+        Vec3 playerPos = CLIENT.player.position();
+        List<Portal> nearbyPortals = CHelper.getClientNearbyPortals(32)
+            .sorted(java.util.Comparator.comparingDouble(p -> p.getDistanceToNearestPointInPortal(playerPos)))
+            .collect(Collectors.toList());
         
         withSwitchedWorld(newWorld, () -> {
             try {

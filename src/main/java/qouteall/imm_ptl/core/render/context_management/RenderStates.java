@@ -88,7 +88,21 @@ public class RenderStates {
         float newPartialTick
     ) {
     }
-    
+
+    /**
+     * Resets the per-frame portal rendering bookkeeping. Must be called once per frame before any portal view is
+     * rendered (PortalViewRenderer.onBeforeExtract). Upstream did this in updatePreRenderInfo, which the 26.x port
+     * stubbed out: portalRenderInfos then grew by one entry per portal view per frame forever, so
+     * getRenderedPortalNum() exceeded every limit after a few frames (MixinParticleEngine cancelled particle
+     * extraction in all portal views, and the list leaked memory).
+     */
+    public static void onFrameStart() {
+        lastPortalRenderInfos = portalRenderInfos;
+        portalRenderInfos = new ArrayList<>();
+        portalsRenderedThisFrame = 0;
+        renderedDimensions.clear();
+    }
+
     //protect the player from mirror room lag attack
     private static void updateIsLaggy() {
     }

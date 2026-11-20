@@ -1,0 +1,470 @@
+package qouteall.imm_ptl.core.render.portalview;
+
+import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.platform.CompareOp;
+import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.AddressMode;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.GpuFormat;
+import com.mojang.blaze3d.textures.GpuSampler;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.BindGroupLayouts;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.client.renderer.extract.LevelExtractor;
+import net.minecraft.client.renderer.fog.FogRenderer;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import qouteall.imm_ptl.core.CHelper;
+import qouteall.imm_ptl.core.ClientWorldLoader;
+import qouteall.imm_ptl.core.IPGlobal;
+import qouteall.imm_ptl.core.ducks.IEPortalCamera;
+import qouteall.imm_ptl.core.portal.Portal;
+import qouteall.imm_ptl.core.render.context_management.PortalRendering;
+import qouteall.imm_ptl.core.render.renderer.PortalRenderer;
+import qouteall.imm_ptl.core.render.context_management.RenderStates;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.List;
+import java.util.Optional;
+import java.util.OptionalDouble;
+
+/**
+ * The portal renderer of the 26.x port.
+ * <p>
+ * Every frame, before the main level is extracted, the destination of each visible portal is rendered
+ * (extract + render with the destination dimension's own LevelExtractor and LevelRenderer) from the
+ * virtual camera into an offscreen {@link RenderTarget}. Then, after the main terrain and entities are
+ * drawn, the portal's view area mesh is drawn into the main target, sampling that offscreen target by
+ * screen position (see portal_view.fsh). The depth of the view area mesh makes entities and blocks in front
+ * of the portal occlude it properly.
+ * <p>
+ * There is no stencil buffer in the new graphics API, and there is no clip plane in vanilla shaders, so
+ * the destination view is clipped by an oblique near plane ({@link ObliqueProjection}).
+ */
+@Environment(EnvType.CLIENT)
+public class PortalViewRenderer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PortalViewRenderer.class);
+
+    private static final Minecraft client = Minecraft.getInstance();
+
+    public static final int MAX_VIEWS = 8;
+    
+    private static final boolean DUMP_VIEWS = System.getProperty("ip.dumpviews") != null;
+    private static int dumpCounter = 0;
+
+    public static final RenderPipeline PORTAL_VIEW_PIPELINE = RenderPipeline.builder(
+            net.minecraft.client.renderer.RenderPipelines.GLOBALS_SNIPPET
+        )
+        .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+        .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+        .withLocation(Identifier.fromNamespaceAndPath("immersive_portals", "pipeline/portal_view"))
+        .withVertexShader(Identifier.fromNamespaceAndPath("immersive_portals", "core/portal_view"))
+        .withFragmentShader(Identifier.fromNamespaceAndPath("immersive_portals", "core/portal_view"))
+        .withColorTargetState(new ColorTargetState(Optional.empty(), GpuFormat.RGBA8_UNORM, ColorTargetState.WRITE_COLOR))
+        .withCull(false)
+        .withVertexBinding(0, DefaultVertexFormat.POSITION)
+        .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+        .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, true))
+        .build();
+
+    public static class PortalView {
+        public final Portal portal;
+        public final TextureTarget target;
+
+        PortalView(Portal portal, TextureTarget target) {
+            this.portal = portal;
+            this.target = target;
+        }
+    }
+
+    // views rendered this frame (waiting to be drawn into the main target)
+    private static final List<PortalView> views = new ArrayList<>();
+    private static final Deque<TextureTarget> targetPool = new ArrayDeque<>();
+    private static final List<GpuBuffer> buffersToClose = new ArrayList<>();
+    private static GpuSampler sampler;
+
+    private static RenderTarget activeTarget = null;
+    private static boolean isRenderingViews = false;
+
+    /**
+     * When not null, {@code GameRenderer.mainRenderTarget()} returns this instead of the real main target.
+     */
+    public static RenderTarget getActiveTargetOverride() {
+        return activeTarget;
+    }
+
+    public static boolean isRenderingViews() {
+        return isRenderingViews;
+    }
+
+    public static void cleanUp() {
+        endFrame();
+        for (TextureTarget target : targetPool) {
+            target.destroyBuffers();
+        }
+        targetPool.clear();
+        if (sampler != null) {
+            sampler.close();
+            sampler = null;
+        }
+    }
+
+    private static void endFrame() {
+        for (PortalView view : views) {
+            targetPool.push(view.target);
+        }
+        views.clear();
+        for (GpuBuffer buffer : buffersToClose) {
+            buffer.close();
+        }
+        buffersToClose.clear();
+    }
+
+    private static TextureTarget acquireTarget(int width, int height) {
+        while (!targetPool.isEmpty()) {
+            TextureTarget target = targetPool.pop();
+            if (target.width == width && target.height == height) {
+                return target;
+            }
+            target.destroyBuffers();
+        }
+        return new TextureTarget("Portal view", width, height, true, GpuFormat.RGBA8_UNORM);
+    }
+
+    /**
+     * Called at the beginning of {@code GameRenderer.extract}, when the level is going to be rendered.
+     * It must run before the main level extraction because every extraction overwrites the shared
+     * level render state.
+     */
+    public static void onBeforeExtract(GameRenderer gameRenderer, DeltaTracker deltaTracker) {
+        endFrame();
+
+        if (isRenderingViews || client.level == null || client.player == null) {
+            return;
+        }
+        if (!ClientWorldLoader.getIsInitialized()) {
+            try {
+                ClientWorldLoader.initializeIfNeeded();
+            }
+            catch (Exception e) {
+                return;
+            }
+        }
+        if (IPGlobal.maxPortalLayer == 0) {
+            return;
+        }
+
+        Camera camera = gameRenderer.mainCamera();
+        if (!camera.isInitialized()) {
+            return;
+        }
+
+        Vec3 cameraPos = camera.position();
+
+        List<Portal> portals = collectPortalsToRender(camera, cameraPos);
+        if (portals.isEmpty()) {
+            return;
+        }
+
+        isRenderingViews = true;
+        try {
+            Profiler.get().push("imm_ptl_portal_views");
+            for (Portal portal : portals) {
+                try {
+                    renderPortalView(gameRenderer, deltaTracker, camera, portal);
+                }
+                catch (Throwable e) {
+                    LOGGER.error("Failed to render portal view {}", portal, e);
+                    activeTarget = null;
+                }
+            }
+            Profiler.get().pop();
+        }
+        finally {
+            isRenderingViews = false;
+            activeTarget = null;
+        }
+    }
+
+    private static List<Portal> collectPortalsToRender(Camera camera, Vec3 cameraPos) {
+        double range = PortalRenderer.getRenderRange();
+
+        List<Portal> result = new ArrayList<>();
+        CHelper.getClientNearbyPortals(range).forEach(portal -> {
+            if (!portal.isPortalValid()) {
+                return;
+            }
+            if (!portal.isVisible()) {
+                return;
+            }
+            if (!portal.isRoughlyVisibleTo(cameraPos)) {
+                return;
+            }
+            double distance = portal.getDistanceToNearestPointInPortal(cameraPos);
+            if (distance > range) {
+                return;
+            }
+            if (distance > 0.1) {
+                Frustum frustum = camera.getCullFrustum();
+                if (!frustum.isVisible(portal.getThinBoundingBox())) {
+                    return;
+                }
+            }
+            if (!PortalRenderer.PORTAL_RENDERING_PREDICATE.invoker().test(portal)) {
+                return;
+            }
+            result.add(portal);
+        });
+
+        result.sort(Comparator.comparingDouble(p -> p.getDistanceToNearestPointInPortal(cameraPos)));
+
+        if (result.size() > MAX_VIEWS) {
+            return new ArrayList<>(result.subList(0, MAX_VIEWS));
+        }
+        return result;
+    }
+
+    private static void renderPortalView(
+        GameRenderer gameRenderer, DeltaTracker deltaTracker, Camera camera, Portal portal
+    ) {
+        ClientLevel destWorld = ClientWorldLoader.getOptionalWorld(portal.getDestDim());
+        if (destWorld == null) {
+            return;
+        }
+        LevelExtractor destExtractor = ClientWorldLoader.WORLD_EXTRACTOR_MAP.get(portal.getDestDim());
+        LevelRenderer destRenderer = ClientWorldLoader.getWorldRenderer(portal.getDestDim());
+        if (destExtractor == null) {
+            return;
+        }
+
+        RenderTarget mainTarget = gameRenderer.mainRenderTarget();
+        TextureTarget target = acquireTarget(mainTarget.width, mainTarget.height);
+
+        Vec3 cameraPos = camera.position();
+
+        // view matrix of the virtual camera: V_B = V_A * M
+        Matrix4f viewA = camera.getViewRotationMatrix(new Matrix4f());
+        Matrix4f transformation = PortalRenderer.getPortalTransformation(portal);
+        Matrix4f viewB = transformation == null ? new Matrix4f(viewA) : viewA.mul(transformation, new Matrix4f());
+
+        Vec3 newCameraPos = portal.transformPoint(cameraPos);
+
+        // the projection of the main camera
+        Matrix4f projection = camera.getViewRotationProjectionMatrix(new Matrix4f());
+        Matrix4f viewRotInverse = viewA.invert(new Matrix4f());
+        projection.mul(viewRotInverse); // projection = (P * V) * V^-1
+
+        // the clip plane: the portal's destination plane, only things behind it (in the content direction) are kept
+        Vec3 contentDir = portal.getContentDirection();
+        Vec3 planePoint = portal.getDestPos().subtract(newCameraPos);
+        Vector3f nEye = viewB.transformDirection(
+            new Vector3f((float) contentDir.x, (float) contentDir.y, (float) contentDir.z)
+        );
+        Vector3f pEye = viewB.transformPosition(
+            new Vector3f((float) planePoint.x, (float) planePoint.y, (float) planePoint.z)
+        );
+        float d = -nEye.dot(pEye);
+        boolean zZeroToOne = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne();
+        Matrix4f obliqueProjection = ObliqueProjection.apply(projection, nEye.x, nEye.y, nEye.z, d, zZeroToOne);
+
+        // culling frustum (non-reversed projection)
+        Matrix4f cullProjection = new Matrix4f().perspective(
+            (float) java.lang.Math.toRadians(camera.getFov()),
+            (float) mainTarget.width / mainTarget.height,
+            0.05f, 1024.0f, zZeroToOne
+        );
+        Frustum frustum = new Frustum(viewB, cullProjection);
+        frustum.prepare(newCameraPos.x, newCameraPos.y, newCameraPos.z);
+
+        Quaternionf rotationB = viewB.getNormalizedRotation(new Quaternionf()).conjugate();
+
+        PortalRendering.pushPortalLayer(portal);
+        try {
+            PortalRendering.onBeginPortalWorldRendering();
+
+            ClientWorldLoader.withSwitchedWorld(destWorld, () -> {
+                IEPortalCamera portalCamera = (IEPortalCamera) camera;
+                portalCamera.ip_beginPortalOverride(destWorld, newCameraPos, rotationB, frustum);
+                try {
+                    renderLevelInto(
+                        gameRenderer, deltaTracker, camera, destWorld, destExtractor, destRenderer,
+                        target, viewB, obliqueProjection, frustum, newCameraPos
+                    );
+                }
+                finally {
+                    portalCamera.ip_endPortalOverride();
+                    activeTarget = null;
+                }
+            });
+
+            PortalRendering.onEndPortalWorldRendering();
+        }
+        finally {
+            PortalRendering.popPortalLayer();
+        }
+
+        views.add(new PortalView(portal, target));
+        
+        if (DUMP_VIEWS) {
+            dumpCounter++;
+            if (dumpCounter % 40 == 5) {
+                LOGGER.info(
+                    "Portal view debug: dest {} loadedChunks={} camPos={} sections={}",
+                    portal.getDestDim().identifier(), destWorld.getChunkSource().getLoadedChunksCount(),
+                    newCameraPos, destRenderer.sectionRenderDispatcher() == null ? "null dispatcher" : "ok"
+                );
+            }
+            if (dumpCounter % 120 == 5) {
+                net.minecraft.client.Screenshot.grab(
+                    client.gameDirectory, "portalview_" + dumpCounter + ".png", target, 1,
+                    message -> LOGGER.info("Dumped portal view: {}", message.getString())
+                );
+            }
+        }
+    }
+
+    private static void renderLevelInto(
+        GameRenderer gameRenderer, DeltaTracker deltaTracker, Camera camera, ClientLevel destWorld,
+        LevelExtractor destExtractor, LevelRenderer destRenderer, TextureTarget target,
+        Matrix4f viewMatrix, Matrix4f projectionMatrix, Frustum frustum, Vec3 cameraPos
+    ) {
+        float partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
+        float cameraEntityPartialTicks = camera.getCameraEntityPartialTicks(deltaTracker);
+
+        // fill the camera state
+        CameraRenderState cameraState = gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
+        camera.extractRenderState(cameraState, cameraEntityPartialTicks);
+        cameraState.pos = cameraPos;
+        cameraState.viewRotationMatrix.set(viewMatrix);
+        cameraState.projectionMatrix.set(projectionMatrix);
+        cameraState.cullFrustum.set(frustum);
+        cameraState.fogType = camera.getFluidInCamera();
+        FogRenderer fogRenderer = ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_getFogRenderer();
+        cameraState.fogData = fogRenderer.setupFog(
+            camera, client.options.getEffectiveRenderDistance(), deltaTracker, 0.0f, destWorld
+        );
+
+        destExtractor.extract(deltaTracker, camera, partialTick);
+
+        // the extraction may have updated the camera state
+        cameraState = gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
+        cameraState.viewRotationMatrix.set(viewMatrix);
+        cameraState.projectionMatrix.set(projectionMatrix);
+
+        // render
+        activeTarget = target;
+
+        GpuBufferSlice projectionBuffer = ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer)
+            .ip_getPortalProjectionBuffer(new Matrix4f(cameraState.projectionMatrix));
+        RenderSystem.setProjectionMatrix(projectionBuffer, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
+
+        fogRenderer.updateBuffer(cameraState.fogData);
+        GpuBufferSlice terrainFog = fogRenderer.getBuffer(FogRenderer.FogMode.WORLD);
+
+        destRenderer.render(
+            ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_getResourcePool(),
+            deltaTracker, false, cameraState, cameraState.viewRotationMatrix,
+            terrainFog, cameraState.fogData.color, true
+        );
+    }
+
+    /**
+     * Called by the frame graph of the main LevelRenderer after the main pass.
+     */
+    public static void drawViews(RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos) {
+        if (views.isEmpty()) {
+            return;
+        }
+
+        if (sampler == null) {
+            sampler = RenderSystem.getDevice().createSampler(
+                AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE,
+                FilterMode.NEAREST, FilterMode.NEAREST, 1, OptionalDouble.empty()
+            );
+        }
+
+        for (PortalView view : views) {
+            drawView(view, mainTarget, viewRotation, cameraPos);
+        }
+    }
+
+    private static void drawView(PortalView view, RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos) {
+        Portal portal = view.portal;
+
+        MeshData meshData;
+        try (ByteBufferBuilder byteBuffer = new ByteBufferBuilder(4096)) {
+            BufferBuilder builder = new BufferBuilder(byteBuffer, PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION);
+            portal.renderViewAreaMesh(
+                portal.getOriginPos().subtract(cameraPos),
+                (p0x, p0y, p0z, p1x, p1y, p1z, p2x, p2y, p2z) -> {
+                    builder.addVertex((float) p0x, (float) p0y, (float) p0z);
+                    builder.addVertex((float) p1x, (float) p1y, (float) p1z);
+                    builder.addVertex((float) p2x, (float) p2y, (float) p2z);
+                }
+            );
+            meshData = builder.build();
+            if (meshData == null) {
+                return;
+            }
+
+            try (meshData) {
+                int vertexCount = meshData.drawState().vertexCount();
+                GpuBuffer vertexBuffer = RenderSystem.getDevice().createBuffer(
+                    () -> "Portal view mesh", com.mojang.blaze3d.buffers.GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
+                );
+                buffersToClose.add(vertexBuffer);
+
+                RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES);
+                GpuBuffer indexBuffer = indices.getBuffer(vertexCount);
+
+                GpuBufferSlice dynamicTransform = RenderSystem.getDynamicUniforms().writeTransform(
+                    viewRotation, new Vector4f(1, 1, 1, 1), new Vector3f(), new Matrix4f()
+                );
+
+                try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                    () -> "Portal view", mainTarget.getColorTextureView(), Optional.empty(),
+                    mainTarget.getDepthTextureView(), OptionalDouble.empty()
+                )) {
+                    renderPass.setPipeline(PORTAL_VIEW_PIPELINE);
+                    RenderSystem.bindDefaultUniforms(renderPass);
+                    renderPass.setUniform("DynamicTransforms", dynamicTransform);
+                    renderPass.bindTexture("Sampler0", view.target.getColorTextureView(), sampler);
+                    renderPass.setVertexBuffer(0, vertexBuffer.slice());
+                    renderPass.setIndexBuffer(indexBuffer, indices.type());
+                    renderPass.drawIndexed(vertexCount, 1, 0, 0, 0);
+                }
+            }
+        }
+    }
+}

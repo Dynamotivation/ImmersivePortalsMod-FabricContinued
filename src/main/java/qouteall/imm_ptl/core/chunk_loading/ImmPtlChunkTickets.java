@@ -97,6 +97,8 @@ public class ImmPtlChunkTickets {
     private final ArrayList<LongLinkedOpenHashSet> chunksToAddTicketByDistance = new ArrayList<>();
     
     private final LongOpenHashSet waitingForLoading = new LongOpenHashSet();
+    private final it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap waitingAge = new it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap();
+    private static final int MAX_WAITING_TICKS = 200;
     
     private boolean isValid = true;
     
@@ -204,12 +206,19 @@ public class ImmPtlChunkTickets {
             }
             
             if (!resultNow.isSuccess()) {
-                LOGGER.error(
-                    "Chunk loading failure {} {} {}",
-                    world, ChunkPos.unpack(chunkPos)
+                // 26.x: before the chunk reaches entity-ticking level the future is an immediate failure,
+                // so it means "not loaded yet". Wait a limited time, then give up on it.
+                int age = waitingAge.addTo(chunkPos, 1) + 1;
+                if (age < MAX_WAITING_TICKS) {
+                    return false;
+                }
+                LOGGER.warn(
+                    "Chunk loading did not finish in time {} {}",
+                    world.dimension().identifier(), ChunkPos.unpack(chunkPos)
                 );
             }
-            
+
+            waitingAge.remove(chunkPos);
             return true;
         });
         
@@ -264,6 +273,7 @@ public class ImmPtlChunkTickets {
             
             if (!keepLoading) {
                 waitingForLoading.remove(chunkPos);
+                waitingAge.remove(chunkPos);
                 
                 boolean pendingTicketAdding = getQueueByDistance(ticketInfo.distanceToSource)
                     .remove(chunkPos);

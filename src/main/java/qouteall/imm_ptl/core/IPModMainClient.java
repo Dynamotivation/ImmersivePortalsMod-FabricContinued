@@ -117,6 +117,7 @@ public class IPModMainClient {
         VisibleSectionDiscovery.init();
         
         ImmPtlViewArea.init();
+        DebugAutoScreenshot.init();
         
         IPFlywheelCompat.init();
     

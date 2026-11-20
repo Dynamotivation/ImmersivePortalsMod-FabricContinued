@@ -434,9 +434,14 @@ public class ClientWorldLoader {
             // all worlds share the same tick rate manager
             ((IEClientWorld) newWorld).ip_setTickRateManager(CLIENT.level.tickRateManager());
 
-            worldExtractor.setLevel(newWorld);
-
-            worldExtractor.onResourceManagerReload(CLIENT.getResourceManager());
+            // Sodium keeps its world renderer in the LevelRenderer referenced by Minecraft.levelRenderer
+            // and looks it up from there in LevelExtractor, so that field must point to the right renderer
+            LevelExtractor finalWorldExtractor = worldExtractor;
+            ClientLevel finalNewWorld = newWorld;
+            withSwitchedLevelRenderer(worldRenderer, () -> {
+                finalWorldExtractor.setLevel(finalNewWorld);
+                finalWorldExtractor.onResourceManagerReload(CLIENT.getResourceManager());
+            });
             // TODO(26.2): the CloudRenderer of secondary renderers is not reloaded (no clouds in portal views)
 
             CLIENT_WORLD_MAP.put(dimension, newWorld);
@@ -543,6 +548,20 @@ public class ClientWorldLoader {
         withSwitchedWorld(world, runnable);
     }
     
+    /**
+     * Temporarily makes {@code Minecraft.levelRenderer} point to the given renderer.
+     */
+    public static void withSwitchedLevelRenderer(LevelRenderer renderer, Runnable runnable) {
+        LevelRenderer original = CLIENT.levelRenderer;
+        ((IEMinecraftClient) CLIENT).ip_setWorldRenderer(renderer);
+        try {
+            runnable.run();
+        }
+        finally {
+            ((IEMinecraftClient) CLIENT).ip_setWorldRenderer(original);
+        }
+    }
+
     public static boolean getIsWorldSwitched() {
         return isWorldSwitched;
     }

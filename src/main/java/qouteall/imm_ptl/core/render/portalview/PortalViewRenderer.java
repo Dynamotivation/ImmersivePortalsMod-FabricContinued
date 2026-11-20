@@ -186,7 +186,7 @@ public class PortalViewRenderer {
 
     // ---- loading placeholder: opaque portal texture that fades out once the destination is ready ----
     private static final Identifier PLACEHOLDER_TEXTURE =
-        Identifier.fromNamespaceAndPath("immersive_portals", "textures/gui/portal_placeholder.png");
+        Identifier.fromNamespaceAndPath("minecraft", "textures/block/nether_portal.png");
     private static final float PLACEHOLDER_FADE_SECONDS = 0.6f;
     private static final float PLACEHOLDER_MAX_WAIT_SECONDS = 8.0f;
     private static final float PLACEHOLDER_MIN_SECONDS = 0.35f;

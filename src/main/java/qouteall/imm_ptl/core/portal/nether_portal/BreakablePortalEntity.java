@@ -232,7 +232,7 @@ public abstract class BreakablePortalEntity extends Portal {
             if (reversePortal.blockPortalShape.frameAreaWithoutCorner.contains(other)
                 && O_O.isObsidian(otherLevel.getBlockState(other))
             ) {
-                otherLevel.destroyBlock(other, true);
+                otherLevel.destroyBlock(other, false);
             }
         }
     }

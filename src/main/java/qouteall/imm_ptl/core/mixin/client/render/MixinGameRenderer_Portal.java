@@ -7,6 +7,8 @@ import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.Lightmap;
+import net.minecraft.client.renderer.LightmapRenderStateExtractor;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import org.joml.Matrix4f;
@@ -34,6 +36,17 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
     @Shadow
     @Final
     private Minecraft minecraft;
+    
+    @Shadow
+    @Final
+    private Lightmap lightmap;
+    
+    @Shadow
+    @Final
+    private LightmapRenderStateExtractor lightmapRenderStateExtractor;
+    
+    @Shadow
+    public abstract net.minecraft.client.renderer.state.GameRenderState gameRenderState();
     
     @Unique
     private ProjectionMatrixBuffer ip_portalProjectionBuffer;
@@ -72,5 +85,19 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
             ip_portalProjectionBuffer = new ProjectionMatrixBuffer("immersive portals view");
         }
         return ip_portalProjectionBuffer.getBuffer(projectionMatrix);
+    }
+    
+    @Override
+    public void ip_updateLightmapNow() {
+        ((IELightmapRenderStateExtractor) lightmapRenderStateExtractor).ip_setNeedsUpdate(true);
+        net.minecraft.client.renderer.state.LightmapRenderState state = gameRenderState().lightmapRenderState;
+        lightmapRenderStateExtractor.extract(state, 1.0F);
+        lightmap.render(state);
+        ((IELightmapRenderStateExtractor) lightmapRenderStateExtractor).ip_setNeedsUpdate(true);
+    }
+    
+    @Override
+    public void ip_markLightmapDirty() {
+        ((IELightmapRenderStateExtractor) lightmapRenderStateExtractor).ip_setNeedsUpdate(true);
     }
 }

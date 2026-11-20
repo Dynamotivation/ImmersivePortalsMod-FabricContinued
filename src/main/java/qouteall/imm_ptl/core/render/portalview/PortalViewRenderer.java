@@ -215,6 +215,8 @@ public class PortalViewRenderer {
         finally {
             isRenderingViews = false;
             activeTarget = null;
+            // the main view's lightmap was overwritten by the destination views
+            ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_markLightmapDirty();
         }
     }
 
@@ -386,6 +388,8 @@ public class PortalViewRenderer {
         );
 
         lastFogColor = cameraState.fogData.color.toString();
+        // the lightmap of the destination dimension (the camera has the destination's environment now)
+        ((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_updateLightmapNow();
         destExtractor.extract(deltaTracker, camera, partialTick);
 
         // the extraction may have updated the camera state

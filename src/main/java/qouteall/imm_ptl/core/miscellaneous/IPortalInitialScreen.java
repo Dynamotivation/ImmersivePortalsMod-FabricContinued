@@ -15,21 +15,55 @@ import qouteall.imm_ptl.core.platform_specific.IPConfig;
 public class IPortalInitialScreen extends Screen {
     private static final int PAGE_NUM = 4;
     
-    private Runnable onClose;
+    private final Runnable onClose;
     
-    private Button prevButton;
-    private StringWidget pageNumberWidget;
-    private Button iKnowButton;
+    private final Button prevButton;
+    private final StringWidget pageNumberWidget;
+    private final Button iKnowButton;
     
-    private ImageWidget iconWidget;
-    private StringWidget titleWidget;
+    private final ImageWidget iconWidget;
+    private final StringWidget titleWidget;
     
-    private MultiLineTextWidget contentWidget;
+    private final MultiLineTextWidget contentWidget;
     
     private int currentPageIndex = 0;
     
     public IPortalInitialScreen(Runnable onClose) {
-        super(net.minecraft.network.chat.Component.empty());
+        super(Component.empty());
+        this.onClose = onClose;
+        
+        net.minecraft.client.gui.Font font = Minecraft.getInstance().font;
+        
+        prevButton = Button.builder(
+            Component.translatable("iportal.initial_screen.prev"),
+            button -> onPrevious()
+        ).build();
+        
+        pageNumberWidget = new StringWidget(
+            Component.empty(),
+            font
+        );
+        
+        iKnowButton = Button.builder(
+            Component.translatable("iportal.initial_screen.i_know"),
+            button -> onIKnow()
+        ).build();
+        
+        iconWidget = ImageWidget.texture(
+            30, 30,
+            Identifier.fromNamespaceAndPath("immersive_portals", "icon.png"),
+            30, 30
+        );
+        
+        titleWidget = new StringWidget(
+            Component.translatable("iportal.initial_screen.title"),
+            font
+        );
+        
+        contentWidget = new MultiLineTextWidget(
+            Component.empty(),
+            font
+        );
     }
     
     private void onPrevious() {
@@ -76,5 +110,36 @@ public class IPortalInitialScreen extends Screen {
     
     @Override
     public void init() {
+        contentWidget.setMaxWidth(this.width - 40);
+        pageNumberWidget.setWidth(50);
+        pageNumberWidget.setHeight(iKnowButton.getHeight());
+        titleWidget.setHeight(iconWidget.getHeight());
+        
+        addRenderableWidget(prevButton);
+        addRenderableWidget(pageNumberWidget);
+        addRenderableWidget(iKnowButton);
+        addRenderableWidget(iconWidget);
+        addRenderableWidget(titleWidget);
+        addRenderableWidget(contentWidget);
+        
+        HeaderAndFooterLayout layout = new HeaderAndFooterLayout(
+            this, 60, 33
+        );
+        
+        LinearLayout headerLayout = layout.addToHeader(LinearLayout.horizontal());
+        headerLayout.addChild(iconWidget, headerLayout.defaultCellSetting().padding(5));
+        headerLayout.addChild(titleWidget, headerLayout.defaultCellSetting().padding(5));
+        
+        LinearLayout contentLayout = layout.addToContents(LinearLayout.vertical());
+        contentLayout.addChild(contentWidget, headerLayout.defaultCellSetting().padding(5));
+        
+        LinearLayout footerLayout = layout.addToFooter(LinearLayout.horizontal());
+        footerLayout.addChild(prevButton, footerLayout.defaultCellSetting().padding(5));
+        footerLayout.addChild(pageNumberWidget, footerLayout.defaultCellSetting().padding(5));
+        footerLayout.addChild(iKnowButton, footerLayout.defaultCellSetting().padding(5));
+        
+        layout.arrangeElements();
+        
+        updateUiStatus(currentPageIndex);
     }
 }

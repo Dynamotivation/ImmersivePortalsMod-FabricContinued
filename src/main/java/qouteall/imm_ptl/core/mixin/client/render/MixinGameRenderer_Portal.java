@@ -59,6 +59,61 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
     @Final
     private net.minecraft.client.Camera mainCamera;
 
+    @Shadow
+    private float spinningEffectTime;
+    @Shadow
+    private float spinningEffectSpeed;
+
+    @Shadow
+    private void bobHurt(
+        net.minecraft.client.renderer.state.level.CameraRenderState cameraState, com.mojang.blaze3d.vertex.PoseStack poseStack
+    ) {
+    }
+
+    @Shadow
+    private void bobView(
+        net.minecraft.client.renderer.state.level.CameraRenderState cameraState, com.mojang.blaze3d.vertex.PoseStack poseStack
+    ) {
+    }
+
+    @Override
+    public Matrix4f ip_applyScreenEffects(
+        Matrix4f projection, net.minecraft.client.renderer.state.level.CameraRenderState cameraState, float worldPartialTicks
+    ) {
+        // same as the start of GameRenderer.renderLevel
+        net.minecraft.client.renderer.state.OptionsRenderState options = gameRenderState().optionsRenderState;
+        Matrix4f result = new Matrix4f(projection);
+
+        com.mojang.blaze3d.vertex.PoseStack bobStack = new com.mojang.blaze3d.vertex.PoseStack();
+        bobHurt(cameraState, bobStack);
+        if (options.bobView) {
+            bobView(cameraState, bobStack);
+        }
+        result.mul(bobStack.last().pose());
+
+        net.minecraft.client.player.LocalPlayer player = minecraft.player;
+        if (player != null) {
+            float screenEffectScale = options.screenEffectScale;
+            float portalIntensity = net.minecraft.util.Mth.lerp(
+                worldPartialTicks, player.oPortalEffectIntensity, player.portalEffectIntensity
+            );
+            float nauseaIntensity = player.getEffectBlendFactor(
+                net.minecraft.world.effect.MobEffects.NAUSEA, worldPartialTicks
+            );
+            float spinningEffectIntensity = Math.max(portalIntensity, nauseaIntensity) * (screenEffectScale * screenEffectScale);
+            if (spinningEffectIntensity > 0.0F) {
+                float skew = 5.0F / (spinningEffectIntensity * spinningEffectIntensity + 5.0F) - spinningEffectIntensity * 0.04F;
+                skew *= skew;
+                org.joml.Vector3f axis = new org.joml.Vector3f(0.0F, net.minecraft.util.Mth.SQRT_OF_TWO / 2.0F, net.minecraft.util.Mth.SQRT_OF_TWO / 2.0F);
+                float angle = (this.spinningEffectTime + worldPartialTicks * this.spinningEffectSpeed) * (float) (Math.PI / 180.0);
+                result.rotate(angle, axis);
+                result.scale(1.0F / skew, 1.0F, 1.0F);
+                result.rotate(-angle, axis);
+            }
+        }
+        return result;
+    }
+
     // Teleportation must be checked every FRAME, before the camera is updated for the frame. Checking only once per
     // tick lets the interpolated camera sit past the portal plane (still in the old dimension) for several frames,
     // which shows as a culled window and a wobble when standing on the portal plane.
@@ -76,6 +131,10 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
     // as every extraction overwrites the shared level render state
     @Inject(method = "extract", at = @At("HEAD"))
     private void ip_onBeforeExtract(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
+        if (minecraft.isGameLoadFinished() && advanceGameTime && minecraft.level != null && minecraft.player != null) {
+            // portal wand wireframes (vanilla gizmos, drawn with the level)
+            qouteall.imm_ptl.peripheral.wand.PortalWandItem.renderMarkingGizmos(mainCamera);
+        }
         if (minecraft.isGameLoadFinished() && advanceGameTime && minecraft.level != null) {
             PortalViewRenderer.onBeforeExtract((GameRenderer) (Object) this, deltaTracker);
         }

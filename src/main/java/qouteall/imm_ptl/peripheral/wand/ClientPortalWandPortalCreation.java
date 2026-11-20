@@ -220,8 +220,132 @@ public class ClientPortalWandPortalCreation {
         Object bufferSource,
         double camX, double camY, double camZ
     ) {
-        // TODO(port): the portal wand debug wireframe rendering
-        //  is deferred with the rest of the 26.x renderer redesign.
+        LocalPlayer player = Minecraft.getInstance().player;
+        
+        if (player == null) {
+            return;
+        }
+        
+        ResourceKey<Level> currDim = player.level().dimension();
+        
+        WandLineCollector collector = (WandLineCollector) bufferSource;
+        VertexConsumer vertexConsumer = collector.lines();
+        Vec3 cameraPos = new Vec3(camX, camY, camZ);
+        
+        WithDim<Circle> circle = protoPortal.getCursorConstraintCircle();
+        
+        Vec3 renderedCursor = ClientPortalWandPortalCreation.cursor.getCurrent();
+        
+        if (circle != null && renderedCursor != null) {
+            // the cursor interpolates along line
+            // it may not always be on the circle
+            renderedCursor = circle.value().projectToCircle(renderedCursor);
+        }
+        
+        ProtoPortal renderedProtoPortal = protoPortal;
+        
+        if (renderedCursor != null) {
+            ProtoPortal pending = protoPortal.copy();
+            boolean canPlace = pending.tryPlaceCursor(currDim, renderedCursor);
+            
+            if (canPlace) {
+                renderedProtoPortal = pending;
+            }
+        }
+        
+        if (circle == null) {
+            circle = protoPortal.getCursorConstraintCircle();
+        }
+        
+        // render the proto-portal
+        if (renderedProtoPortal.firstSide != null && currDim == renderedProtoPortal.firstSide.dimension) {
+            WireRenderingHelper.renderSmallCubeFrame(
+                vertexConsumer, cameraPos, renderedProtoPortal.firstSide.leftBottom,
+                colorOfFirstSideLeftBottom, 1.0, matrixStack
+            );
+            
+            if (renderedProtoPortal.firstSide.rightBottom != null) {
+                WireRenderingHelper.renderSmallCubeFrame(
+                    vertexConsumer, cameraPos, renderedProtoPortal.firstSide.rightBottom,
+                    colorOfFirstSideRightBottom, 1.0, matrixStack
+                );
+            }
+            if (renderedProtoPortal.firstSide.leftTop != null) {
+                WireRenderingHelper.renderSmallCubeFrame(
+                    vertexConsumer, cameraPos, renderedProtoPortal.firstSide.leftTop,
+                    colorOfFirstSideLeftUp, 1.0, matrixStack
+                );
+                
+                WandUtil.renderPortalAreaGrid(
+                    vertexConsumer,
+                    cameraPos,
+                    renderedProtoPortal.firstSide,
+                    colorOfFirstPortalArea,
+                    matrixStack
+                );
+            }
+        }
+        
+        if (renderedProtoPortal.secondSide != null && currDim == renderedProtoPortal.secondSide.dimension) {
+            WireRenderingHelper.renderSmallCubeFrame(
+                vertexConsumer, cameraPos, renderedProtoPortal.secondSide.leftBottom,
+                colorOfSecondSideLeftBottom, 1.0, matrixStack
+            );
+            
+            if (renderedProtoPortal.secondSide.rightBottom != null) {
+                WireRenderingHelper.renderSmallCubeFrame(
+                    vertexConsumer, cameraPos, renderedProtoPortal.secondSide.rightBottom,
+                    colorOfSecondSideRightBottom, 1.0, matrixStack
+                );
+            }
+            if (renderedProtoPortal.secondSide.leftTop != null) {
+                WireRenderingHelper.renderSmallCubeFrame(
+                    vertexConsumer, cameraPos, renderedProtoPortal.secondSide.leftTop,
+                    colorOfSecondSideLeftUp, 1.0, matrixStack
+                );
+                
+                WandUtil.renderPortalAreaGrid(
+                    vertexConsumer,
+                    cameraPos,
+                    renderedProtoPortal.secondSide,
+                    colorOfSecondPortalArea,
+                    matrixStack
+                );
+            }
+        }
+        
+        VertexConsumer debugLineStripConsumer = collector.lineStrip();
+        
+        // render the circle
+        WithDim<Circle> renderedCircle = circle != null ?
+            circle : renderedProtoPortal.getCursorConstraintCircle();
+        if (renderedCircle != null && renderedCircle.dimension() == currDim) {
+            WireRenderingHelper.renderCircle(
+                debugLineStripConsumer, cameraPos,
+                renderedCircle.value(),
+                colorOfCircle,
+                matrixStack
+            );
+        }
+        
+        // render the plane (don't render the plane if renders circle)
+        RenderedPlane currRenderedPlane = renderedPlane.getCurrent();
+        if (currRenderedPlane != null &&
+            currRenderedPlane.plane() != null &&
+            currRenderedPlane.plane().dimension() == currDim
+        ) {
+            double scale = currRenderedPlane.scale();
+            if (scale > 0.01) {
+                WireRenderingHelper.renderPlane(
+                    debugLineStripConsumer,
+                    cameraPos, currRenderedPlane.plane().value(),
+                    scale,
+                    colorOfPlane,
+                    matrixStack,
+                    true
+                );
+            }
+        }
     }
     
 }

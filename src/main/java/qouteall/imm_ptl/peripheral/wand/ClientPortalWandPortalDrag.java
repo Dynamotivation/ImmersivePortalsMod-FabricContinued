@@ -836,8 +836,168 @@ public class ClientPortalWandPortalDrag {
         Object bufferSource,
         double camX, double camY, double camZ
     ) {
-        // TODO(port): the portal wand debug wireframe rendering
-        //  is deferred with the rest of the 26.x renderer redesign.
+        LocalPlayer player = Minecraft.getInstance().player;
+        
+        if (player == null) {
+            return;
+        }
+        
+        if (PortalRendering.isRendering()) {
+            return;
+        }
+        
+        renderedWidthLock.setTarget(lockWidth ? 1.0 : 0.0, Helper.secondToNano(0.5));
+        renderedHeightLock.setTarget(lockHeight ? 1.0 : 0.0, Helper.secondToNano(0.5));
+        
+        renderedWidthLineSegment.setTarget(
+            (lockWidth ||
+                (selectionStatus != null &&
+                    selectionStatus.selectsHorizontalEdge &&
+                    draggingContext == null
+                )
+            ) ? 1.0 : 0.0,
+            Helper.secondToNano(0.5)
+        );
+        renderedHeightLineSegment.setTarget(
+            (lockHeight ||
+                (selectionStatus != null &&
+                    selectionStatus.selectsVerticalEdge &&
+                    draggingContext == null
+                )
+            ) ? 1.0 : 0.0,
+            Helper.secondToNano(0.5)
+        );
+        
+        ResourceKey<Level> currDim = player.level().dimension();
+        
+        Vec3 cameraPos = new Vec3(camX, camY, camZ);
+        
+        WandLineCollector collector = (WandLineCollector) bufferSource;
+        VertexConsumer vertexConsumer = collector.lines();
+        
+        Vec3 renderedCursor = getCursorToRender();
+        if (renderedCursor != null) {
+            WireRenderingHelper.renderSmallCubeFrame(
+                vertexConsumer, cameraPos, renderedCursor,
+                colorOfCursor, cursor.getCurrent().scale(), matrixStack
+            );
+        }
+        
+        Portal portal = null;
+        
+        if (draggingContext != null) {
+            portal = WandUtil.getClientPortalByUUID(draggingContext.portalId);
+        }
+        
+        if (portal == null && selectedPortalId != null) {
+            portal = getSelectedPortal();
+        }
+        
+        UnilateralPortalState rect = null;
+        if (draggingContext != null) {
+            if (portal != null) {
+                rect = portal.getThisSideState();
+                renderRect(
+                    matrixStack, cameraPos, vertexConsumer, rect
+                );
+                renderedRect.setTarget(rect, 0);
+            }
+        }
+        else {
+            rect = renderedRect.getCurrent();
+            if (rect != null && rect.dimension() == currDim) {
+                renderRect(matrixStack, cameraPos, vertexConsumer, rect);
+            }
+        }
+        
+        if (lockedAnchor != null && portal != null) {
+            renderedLockedAnchor.setTarget(
+                new RenderedPoint(
+                    new WithDim<>(portal.getOriginDim(), lockedAnchor.getPos(portal)), 1.0
+                ),
+                Helper.secondToNano(0.5)
+            );
+        }
+        else {
+            renderedLockedAnchor.clearTarget();
+        }
+        
+        if (portal != null) {
+            RenderedPoint current = renderedLockedAnchor.getCurrent();
+            if (current != null && current.pos() != null && current.pos().dimension() == currDim) {
+                Vec3 lockPos = current.pos().value();
+                
+                if (draggingContext != null && lockedAnchor != null) {
+                    // make the lock pos follow portal when dragging
+                    lockPos = lockedAnchor.getPos(portal);
+                }
+                
+                double lockExtraScale = getLockExtraScale(portal.getThisSideState());
+                
+                matrixStack.pushPose();
+                matrixStack.scale(0.5f, 0.5f, 0.5f); // make it closer to camera to see it through block
+                WireRenderingHelper.renderLockShape(
+                    vertexConsumer, cameraPos,
+                    lockPos, current.scale() * lockExtraScale, colorOfLock,
+                    matrixStack
+                );
+                matrixStack.popPose();
+                
+                WireRenderingHelper.renderSmallCubeFrame(
+                    vertexConsumer, cameraPos, lockPos,
+                    colorOfCursorInLock, current.scale() * lockExtraScale, matrixStack
+                );
+            }
+            
+            renderWidthHeightLock(matrixStack, cameraPos, vertexConsumer, portal.getThisSideState());
+        }
+        
+        if (rect != null) {
+            renderWidthHeightLineSegment(matrixStack, cameraPos, vertexConsumer, rect);
+        }
+        
+        VertexConsumer debugLineStripConsumer = collector.lineStrip();
+        
+        RenderedPlane plane = renderedPlane.getCurrent();
+        if (plane != null && plane.plane() != null && plane.plane().dimension() == currDim) {
+            Plane planeValue = plane.plane().value();
+
+            // make the plane to follow the cursor
+            // even the animation of the two are in different curve and duration
+            if (renderedCursor != null) {
+                planeValue = planeValue.getParallelPlane(renderedCursor);
+            }
+
+            WireRenderingHelper.renderPlane(
+                debugLineStripConsumer, cameraPos, planeValue,
+                plane.scale(), colorOfPlane,
+                matrixStack,
+                true
+            );
+        }
+        
+        // render the pre-plane as a circle
+        RenderedPlane prePlane = renderedPrePlane.getCurrent();
+        if (prePlane != null && prePlane.plane() != null
+            && prePlane.plane().dimension() == currDim
+        ) {
+            Plane planeValue = prePlane.plane().value();
+            
+            // make the plane to follow the cursor
+            // even the animation of the two are in different curve and duration
+            if (renderedCursor != null) {
+                planeValue = planeValue.getParallelPlane(renderedCursor);
+            }
+            
+            WireRenderingHelper.renderCircle(
+                debugLineStripConsumer, cameraPos, new Circle(
+                    planeValue, planeValue.pos(),
+                    prePlane.scale() * renderedPreCircleRadius
+                ),
+                colorOfPlane,
+                matrixStack
+            );
+        }
     }
     
     @Nullable

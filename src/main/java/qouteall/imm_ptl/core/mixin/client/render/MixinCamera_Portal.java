@@ -51,55 +51,32 @@ public abstract class MixinCamera_Portal implements IEPortalCamera {
     @Mutable
     @Final
     private EnvironmentAttributeProbe attributeProbe;
+    // a stack: portal views can be nested (a portal seen through a portal)
     @Unique
-    private EnvironmentAttributeProbe ip_savedProbe;
-    
-    @Unique
-    private boolean ip_overridden = false;
-    @Unique
-    private Level ip_savedLevel;
-    @Unique
-    private Vec3 ip_savedPosition;
-    @Unique
-    private BlockPos ip_savedBlockPos;
-    @Unique
-    private final Vector3f ip_savedForwards = new Vector3f();
-    @Unique
-    private final Vector3f ip_savedUp = new Vector3f();
-    @Unique
-    private final Vector3f ip_savedLeft = new Vector3f();
-    @Unique
-    private float ip_savedXRot;
-    @Unique
-    private float ip_savedYRot;
-    @Unique
-    private final Quaternionf ip_savedRotation = new Quaternionf();
-    @Unique
-    private Frustum ip_savedFrustum;
-    
+    private final java.util.ArrayDeque<qouteall.imm_ptl.core.render.portalview.CameraOverrideState> ip_overrideStack =
+        new java.util.ArrayDeque<>();
+
     @Override
     public void ip_beginPortalOverride(ClientLevel newLevel, Vec3 pos, Quaternionf newRotation, Frustum newFrustum) {
-        if (ip_overridden) {
-            throw new IllegalStateException("camera already overridden");
-        }
-        ip_overridden = true;
-        
-        ip_savedLevel = level;
-        ip_savedPosition = position;
-        ip_savedBlockPos = blockPosition.immutable();
-        ip_savedForwards.set(forwards);
-        ip_savedUp.set(up);
-        ip_savedLeft.set(left);
-        ip_savedXRot = xRot;
-        ip_savedYRot = yRot;
-        ip_savedRotation.set(rotation);
-        ip_savedFrustum = cullFrustum;
-        
-        ip_savedProbe = attributeProbe;
+        qouteall.imm_ptl.core.render.portalview.CameraOverrideState saved =
+            new qouteall.imm_ptl.core.render.portalview.CameraOverrideState();
+        saved.level = level;
+        saved.position = position;
+        saved.blockPos = blockPosition.immutable();
+        saved.forwards.set(forwards);
+        saved.up.set(up);
+        saved.left.set(left);
+        saved.xRot = xRot;
+        saved.yRot = yRot;
+        saved.rotation.set(rotation);
+        saved.frustum = cullFrustum;
+        saved.probe = attributeProbe;
+        ip_overrideStack.push(saved);
+
         EnvironmentAttributeProbe newProbe = new EnvironmentAttributeProbe();
         newProbe.tick(newLevel, pos);
         attributeProbe = newProbe;
-        
+
         level = newLevel;
         position = pos;
         blockPosition.set(pos.x, pos.y, pos.z);
@@ -113,30 +90,25 @@ public abstract class MixinCamera_Portal implements IEPortalCamera {
         cullFrustum = newFrustum;
         matrixPropertiesDirty |= 3;
     }
-    
+
     @Override
     public void ip_endPortalOverride() {
-        if (!ip_overridden) {
+        qouteall.imm_ptl.core.render.portalview.CameraOverrideState saved = ip_overrideStack.poll();
+        if (saved == null) {
             return;
         }
-        ip_overridden = false;
-        
-        attributeProbe = ip_savedProbe;
-        ip_savedProbe = null;
-        
-        level = ip_savedLevel;
-        position = ip_savedPosition;
-        blockPosition.set(ip_savedBlockPos);
-        forwards.set(ip_savedForwards);
-        up.set(ip_savedUp);
-        left.set(ip_savedLeft);
-        xRot = ip_savedXRot;
-        yRot = ip_savedYRot;
-        rotation.set(ip_savedRotation);
-        cullFrustum = ip_savedFrustum;
+
+        attributeProbe = saved.probe;
+        level = saved.level;
+        position = saved.position;
+        blockPosition.set(saved.blockPos);
+        forwards.set(saved.forwards);
+        up.set(saved.up);
+        left.set(saved.left);
+        xRot = saved.xRot;
+        yRot = saved.yRot;
+        rotation.set(saved.rotation);
+        cullFrustum = saved.frustum;
         matrixPropertiesDirty |= 3;
-        
-        ip_savedLevel = null;
-        ip_savedFrustum = null;
     }
 }

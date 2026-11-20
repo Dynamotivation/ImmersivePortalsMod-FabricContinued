@@ -7,6 +7,15 @@ import org.joml.Matrix4f;
 
 public interface IEGameRendererPortal {
     FogRenderer ip_getFogRenderer();
+
+    /**
+     * Applies what GameRenderer.renderLevel adds to the level projection of the MAIN view: hurt tilt, view bobbing and
+     * the portal/nausea spin. The pane of a portal is drawn in the main view, so the destination view must get the same
+     * transformation, otherwise its content swims against the frame while walking.
+     */
+    Matrix4f ip_applyScreenEffects(
+        Matrix4f projection, net.minecraft.client.renderer.state.level.CameraRenderState cameraState, float worldPartialTicks
+    );
     
     GraphicsResourceAllocator ip_getResourcePool();
     

@@ -76,8 +76,8 @@ public abstract class MixinLevelRenderer_Portal implements qouteall.imm_ptl.core
         )
     )
     private void ip_addPortalViewPass(CallbackInfo ci, @Local FrameGraphBuilder frame) {
-        if (PortalViewRenderer.isRenderingViews()) {
-            // no recursion yet: portals inside portal views are not drawn
+        if (!PortalViewRenderer.shouldAddViewPass()) {
+            // rendering a destination without portals of its own in view
             return;
         }
         

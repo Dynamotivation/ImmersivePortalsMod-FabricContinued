@@ -290,6 +290,45 @@ public class PortalWandItem extends Item {
         }
     }
     
+    private static boolean wandRenderFailed = false;
+
+    /**
+     * Called every frame before the level is extracted (inside the per-frame gizmo collection scope of the client):
+     * the wand wireframes are emitted as vanilla gizmos, which the level renderer then draws.
+     */
+    @Environment(EnvType.CLIENT)
+    public static void renderMarkingGizmos(net.minecraft.client.Camera camera) {
+        if (wandRenderFailed) {
+            return;
+        }
+        LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
+        if (player == null) {
+            return;
+        }
+        ItemStack itemStack = player.getMainHandItem();
+        if (itemStack.getItem() != instance) {
+            return;
+        }
+        try {
+            net.minecraft.world.phys.Vec3 cameraPos = camera.position();
+            WandLineCollector collector = new WandLineCollector(cameraPos);
+            clientRender(player, itemStack, new PoseStack(), collector, cameraPos.x, cameraPos.y, cameraPos.z);
+            collector.flush();
+        }
+        catch (IllegalStateException e) {
+            // no gizmo collector in this render path (e.g. a screenshot render), skip this frame
+            if (!String.valueOf(e.getMessage()).contains("GizmoCollector")) {
+                wandRenderFailed = true;
+                org.slf4j.LoggerFactory.getLogger(PortalWandItem.class).error("Portal wand rendering failed, disabled", e);
+            }
+        }
+        catch (Throwable e) {
+            // purely visual: never take the game down
+            wandRenderFailed = true;
+            org.slf4j.LoggerFactory.getLogger(PortalWandItem.class).error("Portal wand rendering failed, disabled", e);
+        }
+    }
+
     @Environment(EnvType.CLIENT)
     public static void clientRender(
         LocalPlayer player, ItemStack itemStack, PoseStack poseStack, Object bufferSource,

@@ -451,6 +451,24 @@ public class PortalViewRenderer {
     private static RenderTarget activeTarget = null;
     private static boolean isRenderingViews = false;
 
+    // ---- nested views: a portal seen through a portal ----
+    // All views of a frame are rendered before the main level is extracted. The nested views of a destination are
+    // rendered (recursively) before that destination itself, then the destination's frame graph draws their panes.
+    private static final int MAX_VIEW_DEPTH = 2;
+    private static final int MAX_VIEWS_PER_FRAME = 10;
+    private static int viewDepth = 0;
+    private static int viewsRenderedThisFrame = 0;
+    // views of destinations (not in the main view list): their targets are recycled at the end of the frame
+    private static final List<PortalView> nestedViewsOwned = new ArrayList<>();
+    // the pane list the next level pass has to draw (empty for the main view: it uses the main list)
+    private static final Deque<List<PortalView>> drawListStack = new ArrayDeque<>();
+    private static float frameDeltaSeconds = 0;
+
+    /** whether the frame graph of the level renderer has to draw portal panes (main view or a nested destination) */
+    public static boolean shouldAddViewPass() {
+        return !isRenderingViews || !drawListStack.isEmpty();
+    }
+
     // The oblique projection clips everything on the camera side of the portal plane, which would also cut the sky
     // dome above/around the camera. So the sky is drawn with the normal projection, then an extra frame pass
     // (MixinLevelRenderer_Portal) switches to the oblique one for terrain, entities, clouds, ...
@@ -508,6 +526,12 @@ public class PortalViewRenderer {
             }
         }
         views.clear();
+        for (PortalView view : nestedViewsOwned) {
+            if (view.target != null) {
+                targetPool.push(view.target);
+            }
+        }
+        nestedViewsOwned.clear();
         for (GpuBuffer buffer : buffersToClose) {
             buffer.close();
         }
@@ -533,6 +557,13 @@ public class PortalViewRenderer {
     public static void onBeforeExtract(GameRenderer gameRenderer, DeltaTracker deltaTracker) {
         endFrame();
         frameCounter++;
+        viewsRenderedThisFrame = 0;
+        viewDepth = 0;
+        drawListStack.clear();
+        long nowNanos = System.nanoTime();
+        frameDeltaSeconds = placeholderLastNanos == 0
+            ? 0 : java.lang.Math.min(0.1f, (nowNanos - placeholderLastNanos) / 1.0e9f);
+        placeholderLastNanos = nowNanos;
         endFrameOfViewResources();
         // per-frame portal counters (RenderStates.getRenderedPortalNum() gates particle extraction in views)
         if (!isRenderingViews) {
@@ -561,7 +592,7 @@ public class PortalViewRenderer {
 
         Vec3 cameraPos = camera.position();
 
-        List<Portal> portals = collectPortalsToRender(camera, cameraPos);
+        List<Portal> portals = collectPortalsToRender(camera, cameraPos, client.level, null);
         if (portals.isEmpty()) {
             return;
         }
@@ -584,20 +615,11 @@ public class PortalViewRenderer {
             Profiler.get().push("imm_ptl_portal_views");
             for (Portal portal : portals) {
                 try {
-                    renderPortalView(gameRenderer, deltaTracker, camera, portal);
+                    renderPortalView(gameRenderer, deltaTracker, camera, portal, null, false, views);
                 }
                 catch (Throwable e) {
                     LOGGER.error("Failed to render portal view {}", portal, e);
-                    activeTarget = null;
-                    activeLightmap = null;
-                    // the failed LevelRenderer.render left vanilla's shared feature frame open, which would crash the
-                    // next render ("PreparedFrame already in use"): release it
-                    try {
-                        ((qouteall.imm_ptl.core.mixin.client.render.IEFeatureRenderDispatcher)
-                            gameRenderer.featureRenderDispatcher()).ip_getPreparedFrame().close();
-                    }
-                    catch (Throwable ignored) {
-                    }
+                    recoverFromFailedView(gameRenderer);
                 }
             }
             Profiler.get().pop();
@@ -606,15 +628,48 @@ public class PortalViewRenderer {
             isRenderingViews = false;
             activeTarget = null;
             activeLightmap = null;
+            // the main view must draw the main list, whatever happened while rendering the destinations
+            drawListStack.clear();
+            viewDepth = 0;
         }
     }
 
-    private static List<Portal> collectPortalsToRender(Camera camera, Vec3 cameraPos) {
+    private static void recoverFromFailedView(GameRenderer gameRenderer) {
+        activeTarget = null;
+        activeLightmap = null;
+        pendingObliqueSlice = null;
+        // the failed LevelRenderer.render left vanilla's shared feature frame open, which would crash the
+        // next render ("PreparedFrame already in use"): release it
+        try {
+            ((qouteall.imm_ptl.core.mixin.client.render.IEFeatureRenderDispatcher)
+                gameRenderer.featureRenderDispatcher()).ip_getPreparedFrame().close();
+        }
+        catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * @param world  the world the portals are in (the main world, or a destination for nested views)
+     * @param parent the portal whose view is being rendered (null for the main view)
+     */
+    private static List<Portal> collectPortalsToRender(
+        Camera camera, Vec3 cameraPos, net.minecraft.world.level.Level world, @org.jetbrains.annotations.Nullable Portal parent
+    ) {
         double range = PortalRenderer.getRenderRange();
 
         List<Portal> result = new ArrayList<>();
-        CHelper.getClientNearbyPortals(range).forEach(portal -> {
+        java.util.stream.Stream<Portal> candidates = parent == null
+            ? CHelper.getClientNearbyPortals(range)
+            : qouteall.imm_ptl.core.IPMcHelper.getNearbyPortals(world, cameraPos, range);
+        candidates.forEach(portal -> {
             if (!portal.isPortalValid()) {
+                return;
+            }
+            if (parent != null
+                && portal.getOriginPos().distanceToSqr(parent.getDestPos()) < 0.25
+                && java.lang.Math.abs(portal.getNormal().dot(parent.getContentDirection())) > 0.95
+            ) {
+                // the portal on the clip plane of the parent view (its reverse): it only shows where we come from
                 return;
             }
             if (!portal.isVisible()) {
@@ -648,7 +703,22 @@ public class PortalViewRenderer {
     }
 
     private static void renderPortalView(
-        GameRenderer gameRenderer, DeltaTracker deltaTracker, Camera camera, Portal portal
+        GameRenderer gameRenderer, DeltaTracker deltaTracker, Camera camera, Portal portal,
+        @org.jetbrains.annotations.Nullable Matrix4f parentProjection, boolean parentFlipped, List<PortalView> out
+    ) {
+        viewDepth++;
+        viewsRenderedThisFrame++;
+        try {
+            renderPortalViewInner(gameRenderer, deltaTracker, camera, portal, parentProjection, parentFlipped, out);
+        }
+        finally {
+            viewDepth--;
+        }
+    }
+
+    private static void renderPortalViewInner(
+        GameRenderer gameRenderer, DeltaTracker deltaTracker, Camera camera, Portal portal,
+        @org.jetbrains.annotations.Nullable Matrix4f parentProjection, boolean parentFlipped, List<PortalView> out
     ) {
         ClientLevel destWorld = ClientWorldLoader.getOptionalWorld(portal.getDestDim());
         if (destWorld == null) {
@@ -673,9 +743,26 @@ public class PortalViewRenderer {
         Vec3 newCameraPos = portal.transformPoint(cameraPos);
 
         // the projection of the main camera
-        Matrix4f projection = camera.getViewRotationProjectionMatrix(new Matrix4f());
-        Matrix4f viewRotInverse = viewA.invert(new Matrix4f());
-        projection.mul(viewRotInverse); // projection = (P * V) * V^-1
+        Matrix4f projection;
+        if (parentProjection != null) {
+            // nested view: the pane is drawn into the parent's target with the parent's projection
+            projection = new Matrix4f(parentProjection);
+        }
+        else {
+            projection = camera.getViewRotationProjectionMatrix(new Matrix4f());
+            Matrix4f viewRotInverse = viewA.invert(new Matrix4f());
+            projection.mul(viewRotInverse); // projection = (P * V) * V^-1
+
+            // The main view multiplies hurt tilt, view bobbing and the portal/nausea spin into its projection. The pane is
+            // drawn in the main view, so the destination needs the same, or its content swims against the frame while walking.
+            CameraRenderState mainCameraState = gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
+            camera.extractRenderState(mainCameraState, camera.getCameraEntityPartialTicks(deltaTracker));
+            projection.set(((qouteall.imm_ptl.core.ducks.IEGameRendererPortal) gameRenderer).ip_applyScreenEffects(
+                projection, mainCameraState, deltaTracker.getGameTimeDeltaPartialTick(false)
+            ));
+        }
+        // without the mirror flip: nested views continue from this
+        Matrix4f baseProjection = new Matrix4f(projection);
 
         // A mirror (or any flipping transformation) reverses the triangle winding of the destination render, so
         // everything would be culled inside-out. Flip x in clip space to restore the winding, and flip back when the
@@ -703,7 +790,7 @@ public class PortalViewRenderer {
         Matrix4f obliqueProjection = cameraNearPlane
             ? new Matrix4f(projection)
             : ObliqueProjection.apply(projection, nEye.x, nEye.y, nEye.z, d, zZeroToOne);
-        pendingNormalProjection = new Matrix4f(projection);
+        Matrix4f normalProjection = new Matrix4f(projection);
 
         // culling frustum (non-reversed projection)
         Matrix4f cullProjection = new Matrix4f().perspective(
@@ -726,7 +813,8 @@ public class PortalViewRenderer {
                 try {
                     renderLevelInto(
                         gameRenderer, deltaTracker, camera, destWorld, destExtractor, destRenderer,
-                        target, viewB, obliqueProjection, frustum, newCameraPos
+                        target, viewB, obliqueProjection, frustum, newCameraPos,
+                        portal, baseProjection, mirrored, normalProjection
                     );
                 }
                 finally {
@@ -744,8 +832,13 @@ public class PortalViewRenderer {
 
         PortalView portalView = new PortalView(portal, target);
         portalView.ready = destRenderer.hasRenderedAllSections();
-        portalView.flipped = mirrored;
-        views.add(portalView);
+        // the pane samples the target by screen position: x is flipped back when this target was rendered with a
+        // different flip than the target the pane is drawn into
+        portalView.flipped = mirrored != parentFlipped;
+        out.add(portalView);
+        if (out != views) {
+            nestedViewsOwned.add(portalView);
+        }
         
         if (DUMP_VIEWS) {
             dumpCounter++;
@@ -774,8 +867,33 @@ public class PortalViewRenderer {
     private static void renderLevelInto(
         GameRenderer gameRenderer, DeltaTracker deltaTracker, Camera camera, ClientLevel destWorld,
         LevelExtractor destExtractor, LevelRenderer destRenderer, TextureTarget target,
-        Matrix4f viewMatrix, Matrix4f projectionMatrix, Frustum frustum, Vec3 cameraPos
+        Matrix4f viewMatrix, Matrix4f projectionMatrix, Frustum frustum, Vec3 cameraPos,
+        Portal parentPortal, Matrix4f baseProjection, boolean flipped, Matrix4f normalProjection
     ) {
+        // Nested views first: every extraction/render overwrites the shared level render state, so everything seen
+        // through this destination's own portals is rendered before this destination is extracted.
+        List<PortalView> nested = java.util.Collections.emptyList();
+        if (viewDepth < MAX_VIEW_DEPTH && viewsRenderedThisFrame < MAX_VIEWS_PER_FRAME) {
+            List<Portal> nestedPortals = collectPortalsToRender(camera, cameraPos, destWorld, parentPortal);
+            if (!nestedPortals.isEmpty()) {
+                nested = new ArrayList<>();
+                for (Portal nestedPortal : nestedPortals) {
+                    if (viewsRenderedThisFrame >= MAX_VIEWS_PER_FRAME) {
+                        break;
+                    }
+                    try {
+                        renderPortalView(gameRenderer, deltaTracker, camera, nestedPortal, baseProjection, flipped, nested);
+                    }
+                    catch (Throwable e) {
+                        LOGGER.error("Failed to render nested portal view {}", nestedPortal, e);
+                        recoverFromFailedView(gameRenderer);
+                    }
+                }
+            }
+        }
+        // the nested renders overwrote these
+        pendingNormalProjection = normalProjection;
+
         float partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
         float cameraEntityPartialTicks = camera.getCameraEntityPartialTicks(deltaTracker);
 
@@ -852,6 +970,11 @@ public class PortalViewRenderer {
 
         renderersUsed.add(destRenderer);
 
+        boolean pushedNested = !nested.isEmpty();
+        if (pushedNested) {
+            drawListStack.push(nested);
+        }
+
         qouteall.imm_ptl.core.ducks.IELevelRendererPortal rendererAccess =
             (qouteall.imm_ptl.core.ducks.IELevelRendererPortal) destRenderer;
         net.minecraft.client.renderer.CloudRenderer originalClouds = rendererAccess.ip_getCloudRenderer();
@@ -864,6 +987,9 @@ public class PortalViewRenderer {
             );
         }
         finally {
+            if (pushedNested) {
+                drawListStack.pop();
+            }
             pendingObliqueSlice = null;
             rendererAccess.ip_setCloudRenderer(originalClouds);
             if (sodiumProjection != null) {
@@ -876,7 +1002,9 @@ public class PortalViewRenderer {
      * Called by the frame graph of the main LevelRenderer after the main pass.
      */
     public static void drawViews(RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos) {
-        if (views.isEmpty()) {
+        // nested destination: the panes of its own portals; main view: all views of the frame
+        List<PortalView> list = drawListStack.isEmpty() ? views : drawListStack.peek();
+        if (list.isEmpty()) {
             return;
         }
 
@@ -887,11 +1015,9 @@ public class PortalViewRenderer {
             );
         }
 
-        long now = System.nanoTime();
-        float deltaSeconds = placeholderLastNanos == 0 ? 0 : java.lang.Math.min(0.1f, (now - placeholderLastNanos) / 1.0e9f);
-        placeholderLastNanos = now;
+        float deltaSeconds = frameDeltaSeconds;
 
-        for (PortalView view : views) {
+        for (PortalView view : list) {
             if (view.target == null) {
                 drawShaderFallback(view, mainTarget, viewRotation, cameraPos);
                 continue;
@@ -995,6 +1121,64 @@ public class PortalViewRenderer {
         }
     }
 
+    /**
+     * Adds the part of a view-space quad at z = -0.07 (just beyond the 0.05 near plane) that lies on the far side of
+     * the portal plane, in camera-relative world coordinates. Empty when the camera faces away from the pane.
+     */
+    private static void addNearPlaneCover(BufferBuilder builder, Portal portal, Matrix4f viewRotation, Vec3 cameraPos) {
+        double signedPlaneDistance = portal.getDistanceToPlane(cameraPos);
+        double planeDistance = java.lang.Math.abs(signedPlaneDistance);
+        // only when the camera is over the pane (its rays through the hole cross the plane inside the shape)
+        if (planeDistance >= 0.3
+            || portal.getDistanceToNearestPointInPortal(cameraPos) >= planeDistance + 0.02
+        ) {
+            return;
+        }
+        Matrix4f inverseView = viewRotation.invert(new Matrix4f());
+        float z = -0.07f;
+        float e = 1.0f;
+        Vector3f[] quad = {
+            inverseView.transformPosition(new Vector3f(-e, -e, z)),
+            inverseView.transformPosition(new Vector3f(e, -e, z)),
+            inverseView.transformPosition(new Vector3f(e, e, z)),
+            inverseView.transformPosition(new Vector3f(-e, e, z))
+        };
+        // signed distance to the portal plane, positive on the camera's side (camera-relative coordinates)
+        Vec3 normal = portal.getNormal();
+        double side = signedPlaneDistance >= 0 ? 1 : -1;
+        Vec3 originRel = portal.getOriginPos().subtract(cameraPos);
+        double[] dist = new double[4];
+        for (int i = 0; i < 4; i++) {
+            dist[i] = side * ((quad[i].x - originRel.x) * normal.x
+                + (quad[i].y - originRel.y) * normal.y
+                + (quad[i].z - originRel.z) * normal.z);
+        }
+        // Sutherland-Hodgman: keep the far side (dist <= 0)
+        List<Vector3f> kept = new ArrayList<>(6);
+        for (int i = 0; i < 4; i++) {
+            int j = (i + 1) % 4;
+            Vector3f a = quad[i];
+            Vector3f b = quad[j];
+            double da = dist[i];
+            double db = dist[j];
+            if (da <= 0) {
+                kept.add(a);
+            }
+            if ((da <= 0) != (db <= 0)) {
+                float t = (float) (da / (da - db));
+                kept.add(new Vector3f(a).lerp(b, t));
+            }
+        }
+        for (int i = 1; i + 1 < kept.size(); i++) {
+            Vector3f p0 = kept.get(0);
+            Vector3f p1 = kept.get(i);
+            Vector3f p2 = kept.get(i + 1);
+            builder.addVertex(p0.x, p0.y, p0.z);
+            builder.addVertex(p1.x, p1.y, p1.z);
+            builder.addVertex(p2.x, p2.y, p2.z);
+        }
+    }
+
     private static void drawView(PortalView view, RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos) {
         Portal portal = view.portal;
 
@@ -1010,25 +1194,13 @@ public class PortalViewRenderer {
                 }
             );
             // Right before the teleport the camera is closer to the pane than the near plane, which cuts a hole into
-            // the pane (the real world behind it shows). Cover the screen just beyond the near plane instead.
-            double planeDistance = java.lang.Math.abs(portal.getDistanceToPlane(cameraPos));
-            if (planeDistance < 0.25
-                && portal.getDistanceToNearestPointInPortal(cameraPos) < planeDistance + 0.02
-            ) {
-                Matrix4f inverseView = viewRotation.invert(new Matrix4f());
-                float z = -0.07f;
-                float e = 1.0f;
-                Vector3f c0 = inverseView.transformPosition(new Vector3f(-e, -e, z));
-                Vector3f c1 = inverseView.transformPosition(new Vector3f(e, -e, z));
-                Vector3f c2 = inverseView.transformPosition(new Vector3f(e, e, z));
-                Vector3f c3 = inverseView.transformPosition(new Vector3f(-e, e, z));
-                builder.addVertex(c0.x, c0.y, c0.z);
-                builder.addVertex(c1.x, c1.y, c1.z);
-                builder.addVertex(c2.x, c2.y, c2.z);
-                builder.addVertex(c0.x, c0.y, c0.z);
-                builder.addVertex(c2.x, c2.y, c2.z);
-                builder.addVertex(c3.x, c3.y, c3.z);
-            }
+            // the pane (the real world behind it shows). Fill it with a quad just beyond the near plane, CLIPPED TO THE
+            // FAR SIDE OF THE PORTAL PLANE: a pixel belongs to the hole exactly when its ray has already crossed the
+            // plane (through the pane) before reaching the quad. An unclipped screen-wide quad also painted the view
+            // when the pane is BEHIND the camera: right after a teleport the reverse portal is ~0 blocks behind the
+            // player, is collected without frustum test (distance < 0.1), and its full-screen quad showed the old
+            // dimension behind the portal for every frame within 0.25 of the plane ("pane skipped, no switch yet").
+            addNearPlaneCover(builder, portal, viewRotation, cameraPos);
             meshData = builder.build();
             if (meshData == null) {
                 return;

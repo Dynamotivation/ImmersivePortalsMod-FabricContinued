@@ -132,6 +132,8 @@ public class ImmPtlNetworking {
      * {@link ClientboundAddEntityPacket}
      * This packet is redirected, so there is no need to contain dimension id
      */
+    private static final boolean DEBUG_PORTAL_SYNC = System.getProperty("ip.debugportals") != null;
+    
     public static record PortalSyncPacket(
         int id,
         UUID uuid,
@@ -200,10 +202,27 @@ public class ImmPtlNetworking {
                     return;
                 }
                 
+                if (DEBUG_PORTAL_SYNC) {
+                    LOGGER.info(
+                        "[PortalSync] update {} from dest {} {} to pos {},{},{} data {}",
+                        existingPortal.getId(), existingPortal.getDestDim().identifier(),
+                        existingPortal.getDestPos(), x, y, z, extraData
+                    );
+                }
                 existingPortal.acceptDataSync(new Vec3(x, y, z), extraData);
+                if (DEBUG_PORTAL_SYNC) {
+                    LOGGER.info(
+                        "[PortalSync] after update {} dest {} {} origin {}",
+                        existingPortal.getId(), existingPortal.getDestDim().identifier(),
+                        existingPortal.getDestPos(), existingPortal.getOriginPos()
+                    );
+                }
             }
             else {
                 // spawn new portal
+                if (DEBUG_PORTAL_SYNC) {
+                    LOGGER.info("[PortalSync] spawn {} {} in {} data {}", id, entityType, dimension.identifier(), extraData);
+                }
                 Entity entity = entityType.create(world, EntitySpawnReason.MOB_SUMMONED);
                 Validate.notNull(entity, "Entity type is null");
                 

@@ -234,7 +234,12 @@ public class ImmPtlClientChunkMap extends ClientChunkCache {
     
     @Override
     public void onLightUpdate(LightLayer lightType, SectionPos chunkSectionPos) {
-        // TODO(26.2 render port): per-dimension LevelRenderer section invalidation
+        // vanilla uses Minecraft.levelExtractor, which belongs to the player's dimension: use this level's extractor
+        net.minecraft.client.renderer.extract.LevelExtractor extractor =
+            qouteall.imm_ptl.core.ClientWorldLoader.WORLD_EXTRACTOR_MAP.get(this.level.dimension());
+        if (extractor != null) {
+            extractor.setSectionDirty(chunkSectionPos.x(), chunkSectionPos.y(), chunkSectionPos.z());
+        }
 
     }
     

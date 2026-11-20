@@ -77,12 +77,7 @@ public class LoadingIndicatorEntity extends Entity {
         if (tickCount > 40) {
             LocalPlayer player = Minecraft.getInstance().player;
             
-            if (player != null &&
-                player.level() == level() &&
-                player.position().distanceToSqr(position()) < 16 * 16
-            ) {
-                showMessageClient();
-            }
+            // no action bar loading text: the portal shows a placeholder texture instead (PortalViewRenderer)
         }
     }
     

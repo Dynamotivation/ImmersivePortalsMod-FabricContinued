@@ -47,6 +47,7 @@ import qouteall.imm_ptl.core.ClientWorldLoader;
 import qouteall.imm_ptl.core.IPGlobal;
 import qouteall.imm_ptl.core.ducks.IEPortalCamera;
 import qouteall.imm_ptl.core.portal.Portal;
+import qouteall.imm_ptl.core.render.OverlayRendering;
 import qouteall.imm_ptl.core.render.context_management.PortalRendering;
 import qouteall.imm_ptl.core.render.renderer.PortalRenderer;
 import qouteall.imm_ptl.core.render.context_management.RenderStates;
@@ -211,6 +212,120 @@ public class PortalViewRenderer {
         .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
         .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
         .build();
+
+    // only the automatically generated two-way nether portals: manual portals, one-way portals (end, ...) and
+    // API portals show their view directly
+    private static boolean usesLoadingPlaceholder(Portal portal) {
+        return portal instanceof qouteall.imm_ptl.core.portal.nether_portal.NetherPortalEntity netherPortal
+            && !netherPortal.isOneWay();
+    }
+
+    private static final Identifier OVERLAY_TEXTURE =
+        Identifier.fromNamespaceAndPath("immersive_portals", "textures/gui/portal_overlay.png");
+    private static final int OVERLAY_FRAMES = 32;
+
+    public static final RenderPipeline PORTAL_OVERLAY_PIPELINE = RenderPipeline.builder(
+            net.minecraft.client.renderer.RenderPipelines.GLOBALS_SNIPPET
+        )
+        .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+        .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+        .withLocation(Identifier.fromNamespaceAndPath("immersive_portals", "pipeline/portal_overlay"))
+        .withVertexShader(Identifier.fromNamespaceAndPath("immersive_portals", "core/portal_placeholder"))
+        .withFragmentShader(Identifier.fromNamespaceAndPath("immersive_portals", "core/portal_overlay"))
+        .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+        .withCull(false)
+        .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
+        .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+        .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+        .build();
+
+    /**
+     * The translucent animated overlay (nether portal swirl) over the pane, see {@link OverlayRendering}.
+     * One quad per block, so the 16x16 frames of the vanilla portal texture strip repeat per block.
+     */
+    private static void drawOverlay(PortalView view, RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos) {
+        Portal portal = view.portal;
+        if (!(portal instanceof qouteall.imm_ptl.core.portal.nether_portal.BreakablePortalEntity breakable)) {
+            return;
+        }
+        qouteall.imm_ptl.core.portal.nether_portal.BreakablePortalEntity.OverlayInfo overlay = breakable.getActualOverlay();
+        if (overlay == null || !OverlayRendering.shouldRenderOverlay(portal)) {
+            return;
+        }
+        double width = portal.getWidth();
+        double height = portal.getHeight();
+        int cellsW = (int) java.lang.Math.max(1, java.lang.Math.round(width));
+        int cellsH = (int) java.lang.Math.max(1, java.lang.Math.round(height));
+        if (cellsW * cellsH > 1600) {
+            return;
+        }
+        Vec3 originRel = portal.getOriginPos().subtract(cameraPos);
+        Vec3 axisW = portal.getAxisW();
+        Vec3 axisH = portal.getAxisH();
+        double cw = width / cellsW;
+        double ch = height / cellsH;
+        int frame = (int) ((System.nanoTime() / 100_000_000L) % OVERLAY_FRAMES);
+        float v0 = frame / (float) OVERLAY_FRAMES;
+        float v1 = (frame + 1) / (float) OVERLAY_FRAMES;
+
+        net.minecraft.client.renderer.texture.AbstractTexture texture = client.getTextureManager().getTexture(OVERLAY_TEXTURE);
+        if (placeholderSampler == null) {
+            placeholderSampler = RenderSystem.getDevice().createSampler(
+                AddressMode.REPEAT, AddressMode.REPEAT,
+                FilterMode.NEAREST, FilterMode.NEAREST, 1, OptionalDouble.empty()
+            );
+        }
+
+        try (ByteBufferBuilder byteBuffer = new ByteBufferBuilder(cellsW * cellsH * 6 * 20 + 64)) {
+            BufferBuilder builder = new BufferBuilder(byteBuffer, PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+            for (int i = 0; i < cellsW; i++) {
+                for (int j = 0; j < cellsH; j++) {
+                    double x0 = -width / 2 + i * cw;
+                    double x1 = x0 + cw;
+                    double y0 = -height / 2 + j * ch;
+                    double y1 = y0 + ch;
+                    Vec3 a = originRel.add(axisW.scale(x0)).add(axisH.scale(y0));
+                    Vec3 b = originRel.add(axisW.scale(x1)).add(axisH.scale(y0));
+                    Vec3 c = originRel.add(axisW.scale(x1)).add(axisH.scale(y1));
+                    Vec3 d = originRel.add(axisW.scale(x0)).add(axisH.scale(y1));
+                    builder.addVertex((float) a.x, (float) a.y, (float) a.z).setUv(0, v1);
+                    builder.addVertex((float) b.x, (float) b.y, (float) b.z).setUv(1, v1);
+                    builder.addVertex((float) c.x, (float) c.y, (float) c.z).setUv(1, v0);
+                    builder.addVertex((float) a.x, (float) a.y, (float) a.z).setUv(0, v1);
+                    builder.addVertex((float) c.x, (float) c.y, (float) c.z).setUv(1, v0);
+                    builder.addVertex((float) d.x, (float) d.y, (float) d.z).setUv(0, v0);
+                }
+            }
+            MeshData meshData = builder.build();
+            if (meshData == null) {
+                return;
+            }
+            try (meshData) {
+                int vertexCount = meshData.drawState().vertexCount();
+                GpuBuffer vertexBuffer = RenderSystem.getDevice().createBuffer(
+                    () -> "Portal overlay mesh", com.mojang.blaze3d.buffers.GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
+                );
+                buffersToClose.add(vertexBuffer);
+                RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES);
+                GpuBuffer indexBuffer = indices.getBuffer(vertexCount);
+                GpuBufferSlice dynamicTransform = RenderSystem.getDynamicUniforms().writeTransform(
+                    viewRotation, new Vector4f(1, 1, 1, (float) overlay.opacity()), new Vector3f(), new Matrix4f()
+                );
+                try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                    () -> "Portal overlay", mainTarget.getColorTextureView(), Optional.empty(),
+                    mainTarget.getDepthTextureView(), OptionalDouble.empty()
+                )) {
+                    renderPass.setPipeline(PORTAL_OVERLAY_PIPELINE);
+                    RenderSystem.bindDefaultUniforms(renderPass);
+                    renderPass.setUniform("DynamicTransforms", dynamicTransform);
+                    renderPass.bindTexture("Sampler0", texture.getTextureView(), placeholderSampler);
+                    renderPass.setVertexBuffer(0, vertexBuffer.slice());
+                    renderPass.setIndexBuffer(indexBuffer, indices.type());
+                    renderPass.drawIndexed(vertexCount, 1, 0, 0, 0);
+                }
+            }
+        }
+    }
 
     /** @return 0 when the placeholder is fully opaque, 1 when the portal view is fully visible */
     private static float updatePlaceholder(PortalView view, float deltaSeconds) {
@@ -661,6 +776,10 @@ public class PortalViewRenderer {
 
         for (PortalView view : views) {
             drawView(view, mainTarget, viewRotation, cameraPos);
+            drawOverlay(view, mainTarget, viewRotation, cameraPos);
+            if (!usesLoadingPlaceholder(view.portal)) {
+                continue;
+            }
             float fade = updatePlaceholder(view, deltaSeconds);
             if (fade < 1) {
                 drawPlaceholder(view, mainTarget, viewRotation, cameraPos, 1 - fade);

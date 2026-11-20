@@ -4,24 +4,18 @@
   "provides": ["iportal", "imm_ptl_core", "immersive_portals_core"],
   "version": "${version}",
   "name": "Immersive Portals",
-  "description": "See through portals and travel between dimensions seamlessly.",
+  "description": "See through portals and travel between dimensions seamlessly. Unofficial port to Minecraft 26.2, based on the work of qouteall and the iPortal team.",
   "authors": [
     "qouteall", "Other Contributors (see GitHub)"
   ],
   "contact": {
     "homepage": "https://qouteall.fun/immptl",
-    "sources": "https://github.com/iPortalTeam/ImmersivePortalsMod",
-    "issues": "https://github.com/iPortalTeam/ImmersivePortalsMod/discussions",
-    "email": "qouteall@163.com",
-    "discord": "https://discord.gg/BZxgURK"
+    "sources": "https://github.com/iPortalTeam/ImmersivePortalsMod"
   },
   "license": "Apache-2.0",
   "icon": "assets/immersive_portals/icon.png",
   "environment": "*",
   "entrypoints": {
-    "preLaunch": [
-      "qouteall.imm_ptl.core.DebugMixinAuditPreLaunch"
-    ],
     "main": [
       "qouteall.imm_ptl.peripheral.platform_specific.PeripheralModEntry",
       "qouteall.imm_ptl.core.platform_specific.IPModEntry",

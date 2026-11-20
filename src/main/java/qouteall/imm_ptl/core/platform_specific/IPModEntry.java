@@ -12,7 +12,6 @@ public class IPModEntry implements ModInitializer {
     
     @Override
     public void onInitialize() {
-        qouteall.imm_ptl.core.DebugMixinAudit.runIfEnabled();
         IPModMain.init();
         RequiemCompat.init();
         

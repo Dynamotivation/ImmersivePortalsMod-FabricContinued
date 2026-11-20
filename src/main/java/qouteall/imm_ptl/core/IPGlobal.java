@@ -125,7 +125,7 @@ public class IPGlobal {
     
     public static boolean enableCrossPortalSound = true;
     
-    public static boolean checkModInfoFromInternet = true;
+    public static boolean checkModInfoFromInternet = false; // the info file of the original mod does not cover 26.x
     
     public static boolean enableUpdateNotification = true;
     

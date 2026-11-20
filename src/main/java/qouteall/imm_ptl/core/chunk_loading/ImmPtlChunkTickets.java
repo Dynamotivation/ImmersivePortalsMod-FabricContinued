@@ -205,19 +205,10 @@ public class ImmPtlChunkTickets {
                 return false;
             }
             
-            if (!resultNow.isSuccess()) {
-                // 26.x: before the chunk reaches entity-ticking level the future is an immediate failure,
-                // so it means "not loaded yet". Wait a limited time, then give up on it.
-                int age = waitingAge.addTo(chunkPos, 1) + 1;
-                if (age < MAX_WAITING_TICKS) {
-                    return false;
-                }
-                LOGGER.warn(
-                    "Chunk loading did not finish in time {} {}",
-                    world.dimension().identifier(), ChunkPos.unpack(chunkPos)
-                );
-            }
-
+            // A failed result is NOT an error: before DistanceManager has applied the new ticket, the future of a not yet
+            // loaded chunk is an immediate failure. Free the throttling slot either way (this is what the 1.21 code did;
+            // an earlier 26.2 port made failed chunks wait 200 ticks, which throttled chunk loading to a crawl and
+            // stalled portal generation).
             waitingAge.remove(chunkPos);
             return true;
         });

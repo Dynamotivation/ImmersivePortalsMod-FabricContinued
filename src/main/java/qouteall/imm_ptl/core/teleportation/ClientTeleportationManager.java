@@ -491,6 +491,9 @@ public class ClientTeleportationManager {
             ClientWorldLoader.getWorldRenderer(toDimension)
         );
         
+        // camera level and lighting of the new dimension (the extractor was switched along with the renderer)
+        client.gameRenderer.setLevel(toWorld);
+        
         if (client.particleEngine != null) {
             // avoid clearing all particles
             ((IEParticleManager) client.particleEngine).ip_setWorld(toWorld);

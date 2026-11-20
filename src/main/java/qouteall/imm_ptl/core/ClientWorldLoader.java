@@ -436,6 +436,8 @@ public class ClientWorldLoader {
 
             // Sodium keeps its world renderer in the LevelRenderer referenced by Minecraft.levelRenderer
             // and looks it up from there in LevelExtractor, so that field must point to the right renderer
+            WORLD_RENDERER_MAP.put(dimension, worldRenderer);
+            WORLD_EXTRACTOR_MAP.put(dimension, worldExtractor);
             LevelExtractor finalWorldExtractor = worldExtractor;
             ClientLevel finalNewWorld = newWorld;
             withSwitchedLevelRenderer(worldRenderer, () -> {
@@ -562,6 +564,18 @@ public class ClientWorldLoader {
         }
     }
 
+    /**
+     * The LevelExtractor that belongs to the given renderer (they are created in pairs, one pair per dimension)
+     */
+    public static @Nullable LevelExtractor getExtractorOfRenderer(LevelRenderer renderer) {
+        for (Map.Entry<ResourceKey<Level>, LevelRenderer> entry : WORLD_RENDERER_MAP.entrySet()) {
+            if (entry.getValue() == renderer) {
+                return WORLD_EXTRACTOR_MAP.get(entry.getKey());
+            }
+        }
+        return null;
+    }
+    
     public static boolean getIsWorldSwitched() {
         return isWorldSwitched;
     }

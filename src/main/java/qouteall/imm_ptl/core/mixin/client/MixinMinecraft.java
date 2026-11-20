@@ -35,6 +35,12 @@ public abstract class MixinMinecraft implements IEMinecraftClient {
     @Final
     public LevelRenderer levelRenderer;
     
+    // 26.x: the extractor is bound to one ClientLevel and feeds the renderer of that dimension
+    @Mutable
+    @Shadow
+    @Final
+    public net.minecraft.client.renderer.extract.LevelExtractor levelExtractor;
+    
     @Shadow
     private static int fps;
     
@@ -156,6 +162,11 @@ public abstract class MixinMinecraft implements IEMinecraftClient {
     @Override
     public void ip_setWorldRenderer(LevelRenderer r) {
         levelRenderer = r;
+        net.minecraft.client.renderer.extract.LevelExtractor extractor =
+            ClientWorldLoader.getExtractorOfRenderer(r);
+        if (extractor != null) {
+            levelExtractor = extractor;
+        }
     }
     
     @Override

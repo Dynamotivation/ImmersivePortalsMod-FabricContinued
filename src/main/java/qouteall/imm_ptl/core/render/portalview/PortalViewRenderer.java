@@ -170,11 +170,68 @@ public class PortalViewRenderer {
     public static class PortalView {
         public final Portal portal;
         public final TextureTarget target;
+        // the destination has its terrain built, so the view can be revealed
+        public boolean ready = false;
 
         PortalView(Portal portal, TextureTarget target) {
             this.portal = portal;
             this.target = target;
         }
+    }
+
+    // ---- loading placeholder: opaque portal texture that fades out once the destination is ready ----
+    private static final Identifier PLACEHOLDER_TEXTURE =
+        Identifier.fromNamespaceAndPath("immersive_portals", "textures/gui/portal_placeholder.png");
+    private static final float PLACEHOLDER_FADE_SECONDS = 0.6f;
+    private static final float PLACEHOLDER_MAX_WAIT_SECONDS = 8.0f;
+    private static final int PLACEHOLDER_READY_FRAMES = 3;
+
+    private static class PlaceholderState {
+        float waitedSeconds = 0;
+        int readyFrames = 0;
+        float fade = 0; // 0: placeholder fully opaque, 1: view fully revealed
+        long lastSeenFrame;
+    }
+
+    private static final java.util.Map<java.util.UUID, PlaceholderState> placeholderStates = new java.util.HashMap<>();
+    private static long placeholderLastNanos = 0;
+    private static GpuSampler placeholderSampler;
+
+    public static final RenderPipeline PORTAL_PLACEHOLDER_PIPELINE = RenderPipeline.builder(
+            net.minecraft.client.renderer.RenderPipelines.GLOBALS_SNIPPET
+        )
+        .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+        .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+        .withLocation(Identifier.fromNamespaceAndPath("immersive_portals", "pipeline/portal_placeholder"))
+        .withVertexShader(Identifier.fromNamespaceAndPath("immersive_portals", "core/portal_placeholder"))
+        .withFragmentShader(Identifier.fromNamespaceAndPath("immersive_portals", "core/portal_placeholder"))
+        .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+        .withCull(false)
+        .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
+        .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+        .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+        .build();
+
+    /** @return 0 when the placeholder is fully opaque, 1 when the portal view is fully visible */
+    private static float updatePlaceholder(PortalView view, float deltaSeconds) {
+        PlaceholderState state = placeholderStates.computeIfAbsent(view.portal.getUUID(), k -> new PlaceholderState());
+        state.lastSeenFrame = frameCounter;
+        if (state.fade < 1) {
+            state.waitedSeconds += deltaSeconds;
+            if (view.ready) {
+                state.readyFrames++;
+            }
+            else {
+                state.readyFrames = 0;
+            }
+            // reveal when the terrain has been built for a few frames (or after a maximum wait, so it never sticks)
+            boolean reveal = state.readyFrames >= PLACEHOLDER_READY_FRAMES
+                || state.waitedSeconds > PLACEHOLDER_MAX_WAIT_SECONDS;
+            if (reveal) {
+                state.fade = java.lang.Math.min(1.0f, state.fade + deltaSeconds / PLACEHOLDER_FADE_SECONDS);
+            }
+        }
+        return state.fade;
     }
 
     // views rendered this frame (waiting to be drawn into the main target)
@@ -225,6 +282,11 @@ public class PortalViewRenderer {
             target.destroyBuffers();
         }
         targetPool.clear();
+        if (placeholderSampler != null) {
+            placeholderSampler.close();
+            placeholderSampler = null;
+        }
+        placeholderStates.clear();
         if (sampler != null) {
             sampler.close();
             sampler = null;
@@ -449,7 +511,9 @@ public class PortalViewRenderer {
             PortalRendering.popPortalLayer();
         }
 
-        views.add(new PortalView(portal, target));
+        PortalView portalView = new PortalView(portal, target);
+        portalView.ready = destRenderer.hasRenderedAllSections();
+        views.add(portalView);
         
         if (DUMP_VIEWS) {
             dumpCounter++;
@@ -591,8 +655,87 @@ public class PortalViewRenderer {
             );
         }
 
+        long now = System.nanoTime();
+        float deltaSeconds = placeholderLastNanos == 0 ? 0 : java.lang.Math.min(0.1f, (now - placeholderLastNanos) / 1.0e9f);
+        placeholderLastNanos = now;
+
         for (PortalView view : views) {
             drawView(view, mainTarget, viewRotation, cameraPos);
+            float fade = updatePlaceholder(view, deltaSeconds);
+            if (fade < 1) {
+                drawPlaceholder(view, mainTarget, viewRotation, cameraPos, 1 - fade);
+            }
+        }
+        placeholderStates.values().removeIf(state -> frameCounter - state.lastSeenFrame > 600);
+    }
+
+    private static void drawPlaceholder(
+        PortalView view, RenderTarget mainTarget, Matrix4f viewRotation, Vec3 cameraPos, float alpha
+    ) {
+        Portal portal = view.portal;
+        net.minecraft.client.renderer.texture.AbstractTexture texture = client.getTextureManager().getTexture(PLACEHOLDER_TEXTURE);
+        if (placeholderSampler == null) {
+            placeholderSampler = RenderSystem.getDevice().createSampler(
+                AddressMode.REPEAT, AddressMode.REPEAT,
+                FilterMode.NEAREST, FilterMode.NEAREST, 1, OptionalDouble.empty()
+            );
+        }
+
+        Vec3 originRel = portal.getOriginPos().subtract(cameraPos);
+        Vec3 axisW = portal.getAxisW();
+        Vec3 axisH = portal.getAxisH();
+        double width = portal.getWidth();
+        double height = portal.getHeight();
+
+        try (ByteBufferBuilder byteBuffer = new ByteBufferBuilder(4096)) {
+            BufferBuilder builder = new BufferBuilder(byteBuffer, PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
+            portal.renderViewAreaMesh(
+                originRel,
+                (p0x, p0y, p0z, p1x, p1y, p1z, p2x, p2y, p2z) -> {
+                    double[][] ps = {{p0x, p0y, p0z}, {p1x, p1y, p1z}, {p2x, p2y, p2z}};
+                    for (double[] p : ps) {
+                        // texture coordinates: one texture repeat per block, in the plane of the portal
+                        double rx = p[0] - originRel.x;
+                        double ry = p[1] - originRel.y;
+                        double rz = p[2] - originRel.z;
+                        float u = (float) (rx * axisW.x + ry * axisW.y + rz * axisW.z + width / 2);
+                        float v = (float) (rx * axisH.x + ry * axisH.y + rz * axisH.z + height / 2);
+                        builder.addVertex((float) p[0], (float) p[1], (float) p[2]).setUv(u, 1 - v);
+                    }
+                }
+            );
+            MeshData meshData = builder.build();
+            if (meshData == null) {
+                return;
+            }
+
+            try (meshData) {
+                int vertexCount = meshData.drawState().vertexCount();
+                GpuBuffer vertexBuffer = RenderSystem.getDevice().createBuffer(
+                    () -> "Portal placeholder mesh", com.mojang.blaze3d.buffers.GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()
+                );
+                buffersToClose.add(vertexBuffer);
+
+                RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES);
+                GpuBuffer indexBuffer = indices.getBuffer(vertexCount);
+
+                GpuBufferSlice dynamicTransform = RenderSystem.getDynamicUniforms().writeTransform(
+                    viewRotation, new Vector4f(1, 1, 1, alpha), new Vector3f(), new Matrix4f()
+                );
+
+                try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                    () -> "Portal placeholder", mainTarget.getColorTextureView(), Optional.empty(),
+                    mainTarget.getDepthTextureView(), OptionalDouble.empty()
+                )) {
+                    renderPass.setPipeline(PORTAL_PLACEHOLDER_PIPELINE);
+                    RenderSystem.bindDefaultUniforms(renderPass);
+                    renderPass.setUniform("DynamicTransforms", dynamicTransform);
+                    renderPass.bindTexture("Sampler0", texture.getTextureView(), placeholderSampler);
+                    renderPass.setVertexBuffer(0, vertexBuffer.slice());
+                    renderPass.setIndexBuffer(indexBuffer, indices.type());
+                    renderPass.drawIndexed(vertexCount, 1, 0, 0, 0);
+                }
+            }
         }
     }
 

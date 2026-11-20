@@ -136,6 +136,9 @@ public abstract class BreakablePortalEntity extends Portal {
     }
     
     private void breakPortalOnThisSide() {
+        if (isRemoved()) {
+            return;
+        }
         blockPortalShape.area.forEach(
             blockPos -> {
                 if (level().getBlockState(blockPos).getBlock() == PortalPlaceholderBlock.instance) {
@@ -161,9 +164,22 @@ public abstract class BreakablePortalEntity extends Portal {
         if (entity instanceof BreakablePortalEntity) {
             return (BreakablePortalEntity) entity;
         }
-        else {
-            return null;
+        
+        // the stored id can be stale (relinking, regeneration): find the reverse portal by geometry
+        if (isOtherSideChunkLoaded()) {
+            List<BreakablePortalEntity> revs = findReversePortals(this);
+            if (!revs.isEmpty()) {
+                return revs.get(0);
+            }
         }
+        return null;
+    }
+    
+    // break the partner immediately instead of only flagging it: a flag is only handled in the partner's own tick,
+    // which does not happen when the partner's chunk is only loaded for portal rendering
+    private static void breakReverse(BreakablePortalEntity reversePortal) {
+        reversePortal.shouldBreakPortal = true;
+        reversePortal.breakPortalOnThisSide();
     }
     
     @Override
@@ -251,7 +267,7 @@ public abstract class BreakablePortalEntity extends Portal {
         
         BreakablePortalEntity reversePortal = getReversePortal();
         if (reversePortal != null) {
-            reversePortal.shouldBreakPortal = true;
+            breakReverse(reversePortal);
         }
         else {
             ServerTaskList.of(level().getServer()).addTask(MyTaskList.withRetryNumberLimit(
@@ -268,7 +284,7 @@ public abstract class BreakablePortalEntity extends Portal {
                     
                     BreakablePortalEntity reversePortal1 = getReversePortal();
                     if (reversePortal1 != null) {
-                        reversePortal1.shouldBreakPortal = true;
+                        breakReverse(reversePortal1);
                     }
                     
                     return true;

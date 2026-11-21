@@ -117,13 +117,36 @@ public abstract class MixinGameRenderer_Portal implements IEGameRendererPortal {
     // Teleportation must be checked every FRAME, before the camera is updated for the frame. Checking only once per
     // tick lets the interpolated camera sit past the portal plane (still in the old dimension) for several frames,
     // which shows as a culled window and a wobble when standing on the portal plane.
+    // Also runs the per-frame work of the upstream GameRenderer.render HEAD hook that had no caller since the 26.x render
+    // split (restored as in the 26.3 port by CaseBacon): one-shot render tasks, the stable timer, per-frame portal animation
+    // (must run before the teleport check) and PRE_GAME_RENDER_EVENT.
     @Inject(method = "update", at = @At("HEAD"))
     private void ip_teleportBeforeCameraUpdate(DeltaTracker deltaTracker, CallbackInfo ci) {
+        qouteall.imm_ptl.core.IPGlobal.PRE_TOTAL_RENDER_TASK_LIST.processTasks();
         if (minecraft.isGameLoadFinished() && minecraft.level != null && minecraft.player != null) {
-            qouteall.imm_ptl.core.render.context_management.RenderStates.setPartialTick(
-                mainCamera.getCameraEntityPartialTicks(deltaTracker)
+            float partialTick = mainCamera.getCameraEntityPartialTicks(deltaTracker);
+            qouteall.imm_ptl.core.render.context_management.RenderStates.setPartialTick(partialTick);
+            qouteall.imm_ptl.core.portal.animation.StableClientTimer.update(
+                minecraft.level.getGameTime(), deltaTracker.getGameTimeDeltaPartialTick(true)
             );
+            qouteall.imm_ptl.core.portal.animation.ClientPortalAnimationManagement.update();
             qouteall.imm_ptl.core.teleportation.ClientTeleportationManager.manageTeleportation(false);
+            qouteall.imm_ptl.core.IPGlobal.PRE_GAME_RENDER_EVENT.invoker().run();
+        }
+    }
+
+    // vanilla only resizes the player's level renderer (entity outline target, occlusion graph); also resize the level
+    // renderers of the other dimensions (from the 26.3 port by CaseBacon)
+    @Inject(method = "resize(II)V", at = @At("RETURN"))
+    private void ip_resizeOtherLevelRenderers(int width, int height, CallbackInfo ci) {
+        if (!qouteall.imm_ptl.core.ClientWorldLoader.getIsInitialized()) {
+            return;
+        }
+        for (net.minecraft.client.renderer.LevelRenderer levelRenderer :
+            qouteall.imm_ptl.core.ClientWorldLoader.WORLD_RENDERER_MAP.values()) {
+            if (levelRenderer != minecraft.levelRenderer) {
+                levelRenderer.resize(width, height);
+            }
         }
     }
 

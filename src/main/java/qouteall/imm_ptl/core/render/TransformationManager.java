@@ -179,8 +179,9 @@ public class TransformationManager {
             
             DQuaternion newRawCameraRotation = immediateFinalRot.hamiltonProduct(newGravityRot.getConjugated());
             
+            // forward-vector based, so a rolled portal does not reverse the look direction (26.3 fork, Kurokekkon)
             Tuple<Double, Double> pitchYaw =
-                DQuaternion.getPitchYawFromRotation(newRawCameraRotation);
+                CameraAngles.fromRotation(newRawCameraRotation, player.getYRot());
             
             float finalYaw = (float) (double) (pitchYaw.getB());
             float finalPitch = (float) (double) (pitchYaw.getA());

@@ -170,6 +170,12 @@ public class ClientWorldLoader {
                     CLIENT.particleEngine.tick();
                 }
                 newWorld.pollLightUpdates();
+                // Since 26.x vanilla runs ClientLevel.update() (which also runs the light engine and publishes new
+                // light data) only for the player's level, and portal views no longer do it while rendering.
+                // (missing remote light updates found by the 26.3 port by CaseBacon)
+                if (IPCGlobal.lateClientLightUpdate) {
+                    newWorld.getChunkSource().getLightEngine().runLightUpdates();
+                }
             }
             catch (Throwable e) {
                 if (LOG_LIMIT.tryDecrement()) {

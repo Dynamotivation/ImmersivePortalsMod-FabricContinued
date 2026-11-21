@@ -73,6 +73,17 @@ public class IPCompatMixinPlugin implements IMixinConfigPlugin {
             return shouldApplyIrisMixin(targetClassName, mixinClassName);
         }
 
+        // optional integrations from the 26.3 fork by Kurokekkon
+        if (mixinClassName.contains("VoiceChat")) {
+            return fabricLoader.isModLoaded("voicechat");
+        }
+        if (mixinClassName.contains("PolymerCore")) {
+            return fabricLoader.isModLoaded("polymer-core");
+        }
+        if (mixinClassName.contains("Polymer")) {
+            return fabricLoader.isModLoaded("polymer-virtual-entity");
+        }
+
         if (mixinClassName.contains("IrisSodium")) {
             boolean sodiumLoaded = fabricLoader.isModLoaded("sodium");
             boolean irisLoaded = fabricLoader.isModLoaded("iris");

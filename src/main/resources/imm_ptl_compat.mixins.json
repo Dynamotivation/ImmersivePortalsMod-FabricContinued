@@ -7,10 +7,13 @@
     "iris.MixinIrisPipelineManager",
     "iris.MixinIrisCommonUniforms",
     "iris.MixinIrisShaderCreator",
-    "iris.MixinIrisHandRenderer"
+    "iris.MixinIrisHandRenderer",
+    "voicechat.MixinVoiceChatAudioChannel"
   ],
   "mixins": [
-    "cardinal_comp.MixinCardinalCompComponentKey"
+    "cardinal_comp.MixinCardinalCompComponentKey",
+    "polymer.MixinPolymerImmersivePortalsUtils",
+    "polymer.MixinPolymerCoreImmersivePortalsUtils"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -9,6 +9,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkHolder;
+import net.minecraft.server.level.ChunkLevel;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.DistanceManager;
@@ -209,6 +210,14 @@ public class ImmPtlChunkTickets {
             // loaded chunk is an immediate failure. Free the throttling slot either way (this is what the 1.21 code did;
             // an earlier 26.2 port made failed chunks wait 200 ticks, which throttled chunk loading to a crawl and
             // stalled portal generation).
+            // Only a failure of a holder that is already at entity-ticking level is a real loading failure
+            // (distinction taken from the 26.3 port by CaseBacon; the slot is freed either way).
+            if (!resultNow.isSuccess() && ChunkLevel.isEntityTicking(chunkHolder.getTicketLevel())) {
+                LOGGER.warn(
+                    "Chunk loading failure {} {} {}",
+                    world, ChunkPos.unpack(chunkPos), resultNow.getError()
+                );
+            }
             waitingAge.remove(chunkPos);
             return true;
         });

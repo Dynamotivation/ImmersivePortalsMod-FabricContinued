@@ -125,6 +125,13 @@ public class IPModInfoChecking {
                 HttpResponse.BodyHandlers.ofString()
             );
             
+            if (response.statusCode() == 404) {
+                // the info is published per game version; there is none for versions without an upstream release
+                // (from the 26.3 port by CaseBacon)
+                LOGGER.info("No iPortal mod info is published for this game version ({})", url);
+                return null;
+            }
+
             if (response.statusCode() != 200) {
                 LOGGER.error("Failed to fetch iPortal mod info {}", response.statusCode());
                 return null;

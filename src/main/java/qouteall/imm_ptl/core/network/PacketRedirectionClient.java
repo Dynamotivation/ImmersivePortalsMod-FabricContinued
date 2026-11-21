@@ -41,14 +41,20 @@ public class PacketRedirectionClient {
      * The dimension id is passed as integer,
      * because the dimension id map is only stable in client thread
      * (reading dimension id map in networking thread is not guaranteed to work).
+     * <p>
+     * Since 26.x vanilla packets are queued in {@link Minecraft#packetProcessor()}, which runs before the client task
+     * queue. The redirected packet is queued there too (as its wrapping payload packet), so that it is handled in order
+     * with the non-redirected packets (ordering fix from the 26.3 port, CaseBacon/Kurokekkon).
+     * Errors are logged instead of disconnecting, as before.
      */
     public static void handleRedirectedPacket(
         int dimensionIntId,
         Packet<ClientGamePacketListener> packet,
-        ClientGamePacketListener handler
+        ClientGamePacketListener handler,
+        ClientboundCustomPayloadPacket wrapper
     ) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.isSameThread()) {
+        if (minecraft.packetProcessor().isSameThread()) {
             ResourceKey<Level> dimension = DimensionIntId.getClientMap()
                 .fromIntegerId(dimensionIntId);
             
@@ -63,16 +69,23 @@ public class PacketRedirectionClient {
                     }
                 );
             }
+            catch (Exception e) {
+                limitedLogger.lErr(
+                    com.mojang.logging.LogUtils.getLogger(),
+                    "Failed to handle redirected packet {} in {}", packet, dimension, e
+                );
+            }
             finally {
                 clientTaskRedirection.set(oldTaskRedirection);
             }
         }
         else {
-            minecraft.execute(() -> {
-                handleRedirectedPacket(
-                    dimensionIntId, packet, handler
-                );
-            });
+            try {
+                minecraft.packetProcessor().scheduleIfPossible(handler, wrapper);
+            }
+            catch (java.util.concurrent.RejectedExecutionException e) {
+                // the client is shutting down
+            }
         }
     }
     

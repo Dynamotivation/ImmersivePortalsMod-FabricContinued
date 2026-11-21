@@ -125,6 +125,10 @@ public class GlobalPortalStorage extends SavedData {
     public static GlobalPortalStorage get(
         ServerLevel world
     ) {
+        if (MIGRATION_CHECKED.add(world)) {
+            migrateLegacyFile(world);
+        }
+        
         GlobalPortalStorage storage = world.getDataStorage().computeIfAbsent(TYPE);
         
         storage.world = new WeakReference<>(world);
@@ -136,6 +140,32 @@ public class GlobalPortalStorage extends SavedData {
         }
         
         return storage;
+    }
+    
+    // levels whose legacy data file was checked (before their storage is first loaded)
+    private static final java.util.Set<ServerLevel> MIGRATION_CHECKED =
+        java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    
+    /**
+     * Since 1.21.5 saved data is stored at {@code data/<namespace>/<path>.dat}; versions before wrote
+     * {@code data/global_portal.dat}. Move such a file before the storage is loaded, so global portals of upgraded
+     * worlds are kept. (from the 26.3 port by CaseBacon/Kurokekkon)
+     */
+    private static void migrateLegacyFile(ServerLevel world) {
+        try {
+            java.nio.file.Path dataDir = world.getServer().storageSource
+                .getDimensionPath(world.dimension()).resolve("data");
+            java.nio.file.Path legacyFile = dataDir.resolve("global_portal.dat");
+            java.nio.file.Path newFile = TYPE.id().withSuffix(".dat").resolveAgainst(dataDir);
+            if (java.nio.file.Files.exists(legacyFile) && !java.nio.file.Files.exists(newFile)) {
+                java.nio.file.Files.createDirectories(newFile.getParent());
+                java.nio.file.Files.move(legacyFile, newFile);
+                LOGGER.info("Moved global portal data {} to {}", legacyFile, newFile);
+            }
+        }
+        catch (Exception e) {
+            LOGGER.error("Failed to migrate the global portal data of {}", world.dimension().identifier(), e);
+        }
     }
     
     @Environment(EnvType.CLIENT)

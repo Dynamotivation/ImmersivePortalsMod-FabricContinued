@@ -1,6 +1,7 @@
 package qouteall.imm_ptl.core.block_manipulation;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
 import net.minecraft.core.BlockPos;
@@ -237,26 +238,47 @@ public class BlockManipulationServer {
     private static void doProcessUseItemOn(
         ServerLevel world, ServerPlayer player, ServerboundUseItemOnPacket packet
     ) {
+        // re-diffed against the 26.2 handleUseItemOn (as the 26.3 fork by Kurokekkon did for 26.3): the hit location
+        // check, the build height check and spawn protection apply to cross-portal use too; the reach check is portal-aware
         player.connection.ackBlockChangesUpTo(packet.getSequence());
         InteractionHand hand = packet.getHand();
         BlockHitResult blockHitResult = packet.getHitResult();
         ResourceKey<Level> dimension = world.dimension();
-        
+
         ItemStack itemStack = player.getItemInHand(hand);
-        
+
         if (!itemStack.isItemEnabled(world.enabledFeatures())) {
             return;
         }
-        
+
+        Vec3 location = blockHitResult.getLocation();
         BlockPos blockPos = blockHitResult.getBlockPos();
+
+        if (!canPlayerReach(dimension, player, blockPos)) {
+            LOGGER.error("Reject cross-portal action {} {} {}", player, world, blockPos);
+            return;
+        }
+
+        Vec3 distance = location.subtract(Vec3.atCenterOf(blockPos));
+        double limit = 1.0000001;
+        if (!(Math.abs(distance.x()) < limit && Math.abs(distance.y()) < limit && Math.abs(distance.z()) < limit)) {
+            LOGGER.warn(
+                "Rejecting cross-portal UseItemOn from {}: location {} too far away from hit block {}.",
+                player, location, blockPos
+            );
+            return;
+        }
+
         Direction direction = blockHitResult.getDirection();
         player.resetLastActionTime();
-        if (world.mayInteract(player, blockPos)) {
-            if (!canPlayerReach(dimension, player, blockPos)) {
-                LOGGER.error("Reject cross-portal action {} {} {}", player, world, blockPos);
-                return;
-            }
-            
+        if (blockPos.getY() > world.getMaxY() || blockPos.getY() < world.getMinY()) {
+            return;
+        }
+
+        if (world.getServer().isUnderSpawnProtection(world, blockPos, player)) {
+            player.sendSpawnProtectionMessage(blockPos);
+        }
+        else if (world.mayInteract(player, blockPos)) {
             InteractionResult actionResult = player.gameMode.useItemOn(
                 player,
                 world,
@@ -264,6 +286,9 @@ public class BlockManipulationServer {
                 hand,
                 blockHitResult
             );
+            if (actionResult.consumesAction()) {
+                CriteriaTriggers.ANY_BLOCK_USE.trigger(player, blockPos, itemStack);
+            }
             if (actionResult instanceof InteractionResult.Success success
                 && success.swingSource() == InteractionResult.SwingSource.SERVER) {
                 player.swing(hand, true);

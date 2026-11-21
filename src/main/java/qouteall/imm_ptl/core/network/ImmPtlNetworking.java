@@ -34,6 +34,7 @@ import qouteall.imm_ptl.core.api.PortalAPI;
 import qouteall.imm_ptl.core.portal.Portal;
 import qouteall.imm_ptl.core.portal.global_portals.GlobalPortalStorage;
 import qouteall.imm_ptl.core.teleportation.ServerTeleportationManager;
+import qouteall.q_misc_util.dimension.DimensionIntId;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -75,11 +76,18 @@ public class ImmPtlNetworking {
         }
         
         public void handle(ServerPlayer player) {
-            ResourceKey<Level> dim = PortalAPI.serverIntToDimKey(
-                player.level().getServer(), dimensionId
-            );
-            
-            ServerTeleportationManager.of(player.level().getServer()).onPlayerTeleportedInClient(
+            net.minecraft.server.MinecraftServer server = player.level().getServer();
+            // an unknown dimension id from the client is rejected instead of throwing
+            ResourceKey<Level> dim = DimensionIntId.getServerMap(server).fromIntegerIdNullable(dimensionId);
+
+            if (dim == null) {
+                ServerTeleportationManager.of(server).onInvalidTeleportRequest(
+                    player, "unknown dimension id " + dimensionId
+                );
+                return;
+            }
+
+            ServerTeleportationManager.of(server).onPlayerTeleportedInClient(
                 player, dim, eyePosBeforeTeleportation, portalId
             );
         }

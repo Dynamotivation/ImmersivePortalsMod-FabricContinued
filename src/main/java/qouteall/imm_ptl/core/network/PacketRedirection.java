@@ -276,9 +276,12 @@ public class PacketRedirection {
         
         @SuppressWarnings({"unchecked", "rawtypes"})
         @Environment(EnvType.CLIENT)
-        public void handle(ClientGamePacketListener listener) {
+        public void handle(
+            ClientGamePacketListener listener,
+            net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket wrapper
+        ) {
             PacketRedirectionClient.handleRedirectedPacket(
-                dimensionIntId, (Packet) packet, listener
+                dimensionIntId, (Packet) packet, listener, wrapper
             );
         }
         
